@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⛽ Beleg einreichen</title>
+<style>
+  :root {
+    --blue: #1a56a0;
+    --blue-light: #e8f0fb;
+    --green: #2d8c4e;
+    --green-light: #e8f5ed;
+    --orange: #f59e0b;
+    --orange-light: #fef3c7;
+    --gray: #f4f5f7;
+    --border: #dde1e8;
+    --text: #1e2330;
+    --muted: #6b7280;
+    --white: #ffffff;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #eef1f6; color: var(--text); min-height: 100vh; }
+  header { background: var(--blue); color: white; padding: 18px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  header span.icon { font-size: 1.6rem; }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
+  main { max-width: 560px; margin: 0 auto; padding: 24px 20px; }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
+  .card h2 { font-size: 1rem; margin-bottom: 6px; }
+  .card p.hint { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+  .field-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .field-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+  .field-group input, .field-group textarea, .field-group select {
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 0.92rem; font-family: inherit; width: 100%;
+  }
+  .field-group input:focus, .field-group textarea:focus, .field-group select:focus { outline: none; border-color: var(--blue); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn { border: none; border-radius: 8px; padding: 12px 20px; font-size: 0.95rem; font-weight: 700; cursor: pointer; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.88; }
+  .btn-blue { background: var(--blue); color: white; }
+  .btn-green { background: var(--green); color: white; }
+  .btn-gray { background: var(--border); color: var(--text); }
+  .btn-sm { padding: 7px 14px; font-size: 0.82rem; width: auto; }
+  .location-box {
+    background: var(--gray); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .location-box.linked { background: var(--green-light); border-color: #86efac; }
+  .location-box .loc-text { flex: 1; min-width: 160px; }
+  .location-box .loc-title { font-weight: 700; font-size: 0.86rem; }
+  .location-box.linked .loc-title { color: var(--green); }
+  .location-box .loc-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+  .unsupported-note { font-size: 0.8rem; color: #92400e; background: var(--orange-light); border: 1px solid var(--orange); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; display: none; }
+  .file-row { display: flex; align-items: center; gap: 10px; }
+  .file-row label.file-label {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--blue);
+    cursor: pointer; border: 1px dashed var(--blue); border-radius: 8px; padding: 9px 14px;
+  }
+  .file-row .file-name { font-size: 0.82rem; color: var(--muted); flex: 1; word-break: break-all; }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; left: 24px; background: var(--text); color: white; padding: 14px 18px;
+    border-radius: 10px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 999; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .success-box { display: none; text-align: center; padding: 20px 0; }
+  .success-box .big { font-size: 2.4rem; margin-bottom: 8px; }
+  .success-box h2 { margin-bottom: 6px; }
+  .success-box p { color: var(--muted); font-size: 0.88rem; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="icon">⛽</span>
+  <h1>Beleg einreichen — 1. SC 1911 Heiligenstadt</h1>
+</header>
+
+<main>
+  <div class="card">
+    <h2>📥 Eingangs-Ordner</h2>
+    <p class="hint">Der Eingangsordner wird vom Budgetverantwortlichen festgelegt — du musst hier nur einmal verbinden (du bekommst den Ordner vom Verein genannt, z. B. den gemappten „Eingang"-Ordner auf dem Storage Share).</p>
+    <div class="location-box" id="locationBox">
+      <div class="loc-text">
+        <div class="loc-title" id="locTitle">Noch nicht verbunden</div>
+        <div class="loc-sub" id="locSub">Bitte einmal mit dem Eingangsordner verbinden.</div>
+      </div>
+      <button class="btn btn-blue btn-sm" id="locReconnectBtn" style="display:none" onclick="reconnectFolder()">🔌 Verbinden</button>
+      <button class="btn btn-blue btn-sm" id="locConnectBtn" onclick="pickFolder()">🔌 Mit Eingangsordner verbinden</button>
+    </div>
+    <div class="unsupported-note" id="unsupportedNote">
+      ⚠️ Dein Browser unterstützt das nicht (funktioniert in Chrome/Edge, nicht in Firefox/Safari). Bitte mit Chrome oder Edge öffnen.
+    </div>
+  </div>
+
+  <div class="card" id="formCard">
+    <h2>📝 Beleg-Angaben</h2>
+    <div class="field-group">
+      <label>Dein Name</label>
+      <input type="text" id="subName" placeholder="z. B. Michel" />
+    </div>
+    <div class="row2">
+      <div class="field-group">
+        <label>Betrag (€)</label>
+        <input type="number" id="subAmount" placeholder="0,00" min="0" step="0.01" />
+      </div>
+      <div class="field-group">
+        <label>Datum</label>
+        <input type="date" id="subDate" />
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Beschreibung</label>
+      <input type="text" id="subDesc" placeholder="z. B. Tanken Vereinsbus" />
+    </div>
+    <div class="field-group">
+      <label>Beleg-Foto / PDF</label>
+      <div class="file-row">
+        <label class="file-label" for="subFile">📎 Datei wählen</label>
+        <input type="file" id="subFile" accept="image/*,.pdf" capture="environment" style="display:none" onchange="handleFileSelect(event)" />
+        <span class="file-name" id="subFileName">Keine Datei ausgewählt</span>
+      </div>
+    </div>
+    <div class="field-group">
+      <label>Notiz (optional)</label>
+      <textarea id="subNote" rows="2" placeholder="Zusätzliche Infos für den Kassierer"></textarea>
+    </div>
+    <button class="btn btn-green" onclick="submitReceipt()">✅ Beleg einreichen</button>
+  </div>
+
+  <div class="card success-box" id="successBox">
+    <div class="big">✅</div>
+    <h2>Beleg eingereicht!</h2>
+    <p>Danke! Der Beleg liegt jetzt im Eingangs-Ordner und wird vom Kassierer übernommen.</p>
+    <button class="btn btn-blue" onclick="resetForm()">➕ Weiteren Beleg einreichen</button>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const FS_API_SUPPORTED = 'showDirectoryPicker' in window;
+  let folderHandle = null;
+  let needsReconnect = false;
+  let pendingFile = null;
+
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('vereinsbudget_eingang_fs', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('handles');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSet(handle) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, 'eingangFolder');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbGet() {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readonly');
+      const req = tx.objectStore('handles').get('eingangFolder');
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbClear() {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').delete('eingangFolder');
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function verifyPermission(handle, mode) {
+    const opts = { mode };
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if ((await handle.requestPermission(opts)) === 'granted') return true;
+    return false;
+  }
+
+  async function pickFolder() {
+    if (!FS_API_SUPPORTED) return toast('⚠️ Browser nicht unterstützt — nutze Chrome/Edge.');
+    try {
+      const handle = await window.showDirectoryPicker();
+      folderHandle = handle;
+      needsReconnect = false;
+      await idbSet(handle);
+      updateLocationUI();
+      toast(`✅ Verbunden mit Eingangsordner: ${handle.name}`);
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('❌ Verbindung fehlgeschlagen.');
+    }
+  }
+  async function reconnectFolder() {
+    if (!folderHandle) return;
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) return toast('❌ Zugriff verweigert.');
+    needsReconnect = false;
+    updateLocationUI();
+  }
+  async function restoreFolder() {
+    if (!FS_API_SUPPORTED) {
+      document.getElementById('unsupportedNote').style.display = 'block';
+      updateLocationUI();
+      return;
+    }
+    try {
+      const handle = await idbGet();
+      if (handle) {
+        folderHandle = handle;
+        const state = await handle.queryPermission({ mode: 'readwrite' });
+        needsReconnect = state !== 'granted';
+      }
+    } catch {}
+    updateLocationUI();
+  }
+  function updateLocationUI() {
+    const box = document.getElementById('locationBox');
+    const title = document.getElementById('locTitle');
+    const sub = document.getElementById('locSub');
+    const reconnectBtn = document.getElementById('locReconnectBtn');
+    const connectBtn = document.getElementById('locConnectBtn');
+    const needsConnect = !folderHandle || needsReconnect;
+    reconnectBtn.style.display = (folderHandle && needsReconnect) ? 'inline-flex' : 'none';
+    connectBtn.style.display = !folderHandle ? 'inline-flex' : 'none';
+    if (folderHandle) {
+      box.classList.add('linked');
+      title.textContent = needsReconnect ? 'Verbindung unterbrochen' : `✅ Verbunden mit Eingangsordner`;
+      sub.textContent = needsReconnect ? 'Bitte „Verbinden" klicken, um Zugriff zu bestätigen.' : 'Belege werden direkt hier abgelegt.';
+    } else {
+      box.classList.remove('linked');
+      title.textContent = 'Noch nicht verbunden';
+      sub.textContent = 'Bitte einmal mit dem Eingangsordner verbinden.';
+    }
+  }
+
+  function sanitizeFilename(name) { return name.replace(/[^a-zA-Z0-9._-]/g, '_'); }
+
+  function fileExtension(filename) {
+    const idx = filename.lastIndexOf('.');
+    return idx >= 0 ? filename.slice(idx) : '';
+  }
+  async function getUniqueFileName(dir, baseName, ext) {
+    let candidate = `${baseName}${ext}`;
+    let counter = 2;
+    while (true) {
+      try {
+        await dir.getFileHandle(candidate, { create: false });
+        candidate = `${baseName}_${counter}${ext}`;
+        counter++;
+      } catch {
+        return candidate; // existiert noch nicht -> frei
+      }
+    }
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    pendingFile = file;
+    document.getElementById('subFileName').textContent = file.name;
+  }
+
+  async function submitReceipt() {
+    if (!folderHandle) return toast('⚠️ Bitte zuerst den Eingangs-Ordner festlegen.');
+    const name = document.getElementById('subName').value.trim();
+    const amount = parseFloat(document.getElementById('subAmount').value);
+    const date = document.getElementById('subDate').value || new Date().toISOString().slice(0,10);
+    const desc = document.getElementById('subDesc').value.trim();
+    const note = document.getElementById('subNote').value.trim();
+    if (!name) return toast('Bitte deinen Namen eingeben.');
+    if (!desc) return toast('Bitte eine Beschreibung eingeben.');
+    if (!pendingFile) return toast('Bitte einen Beleg (Foto/PDF) auswählen.');
+
+    try {
+      const ok = await verifyPermission(folderHandle, 'readwrite');
+      if (!ok) { needsReconnect = true; updateLocationUI(); return toast('❌ Schreibrechte verweigert.'); }
+
+      const ext = fileExtension(pendingFile.name);
+      const baseName = `${sanitizeFilename(date)}_${sanitizeFilename(desc)}_${sanitizeFilename(name)}`;
+      const uniqueName = await getUniqueFileName(folderHandle, baseName, ext);
+      const fileHandle = await folderHandle.getFileHandle(uniqueName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(pendingFile);
+      await writable.close();
+
+      let queue = [];
+      try {
+        const qHandle = await folderHandle.getFileHandle('eingaenge.json');
+        const qFile = await qHandle.getFile();
+        queue = JSON.parse(await qFile.text()) || [];
+      } catch {}
+      queue.push({
+        id: Date.now(),
+        name, amount: isNaN(amount) ? null : amount, date, desc, note,
+        fileName: uniqueName, fileMime: pendingFile.type || 'application/octet-stream', fileOrigName: pendingFile.name,
+        submittedAt: new Date().toISOString()
+      });
+      const qHandleW = await folderHandle.getFileHandle('eingaenge.json', { create: true });
+      const qWritable = await qHandleW.createWritable();
+      await qWritable.write(JSON.stringify(queue, null, 2));
+      await qWritable.close();
+
+      document.getElementById('formCard').style.display = 'none';
+      document.getElementById('successBox').style.display = 'block';
+    } catch (e) {
+      toast('❌ Einreichen fehlgeschlagen: ' + e.message);
+    }
+  }
+
+  function resetForm() {
+    document.getElementById('subAmount').value = '';
+    document.getElementById('subDesc').value = '';
+    document.getElementById('subNote').value = '';
+    document.getElementById('subFileName').textContent = 'Keine Datei ausgewählt';
+    document.getElementById('subDate').value = new Date().toISOString().slice(0,10);
+    pendingFile = null;
+    document.getElementById('subFile').value = '';
+    document.getElementById('formCard').style.display = 'block';
+    document.getElementById('successBox').style.display = 'none';
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  document.getElementById('subDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('subName').value = localStorage.getItem('eingang_username') || '';
+  document.getElementById('subName').addEventListener('input', e => localStorage.setItem('eingang_username', e.target.value.trim()));
+  restoreFolder();
+</script>
+</body>
+</html>
