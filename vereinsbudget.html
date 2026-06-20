@@ -1825,19 +1825,25 @@
     try {
       const ok = await verifyPermission(eingangFolderHandle, 'read');
       if (!ok) return [];
-      const fh = await eingangFolderHandle.getFileHandle('eingaenge.json');
-      const file = await fh.getFile();
-      return JSON.parse(await file.text()) || [];
+      const allNames = [];
+      for await (const [name, handle] of eingangFolderHandle.entries()) {
+        if (handle.kind === 'file') allNames.push(name);
+      }
+      const queue = [];
+      for (const metaName of allNames.filter(n => n.endsWith('.meta.json'))) {
+        try {
+          const fh = await eingangFolderHandle.getFileHandle(metaName);
+          const file = await fh.getFile();
+          const meta = JSON.parse(await file.text());
+          const base = metaName.slice(0, -'.meta.json'.length);
+          const fileName = allNames.find(n => n !== metaName && n.startsWith(base + '.'));
+          if (!fileName) continue;
+          queue.push({ id: metaName, fileName, ...meta });
+        } catch {}
+      }
+      queue.sort((a, b) => (a.submittedAt || '').localeCompare(b.submittedAt || ''));
+      return queue;
     } catch { return []; }
-  }
-  async function saveEingaenge(arr) {
-    if (!eingangFolderHandle) return;
-    const ok = await verifyPermission(eingangFolderHandle, 'readwrite');
-    if (!ok) return;
-    const fh = await eingangFolderHandle.getFileHandle('eingaenge.json', { create: true });
-    const w = await fh.createWritable();
-    await w.write(JSON.stringify(arr, null, 2));
-    await w.close();
   }
   async function renderEingaenge() {
     const list = document.getElementById('eingangList');
@@ -1851,14 +1857,14 @@
           <strong>${s.desc}</strong>${s.amount ? ' — ' + fmt(s.amount) : ''}
           <div class="wish-meta">${s.date} · von ${s.name}${s.note ? ' · „' + s.note + '"' : ''}</div>
         </div>
-        <select class="cat-edit-select" id="eingangType_${s.id}" onchange="updateEingangCatOptions(${s.id})">
+        <select class="cat-edit-select" id="eingangType_${s.id}" onchange="updateEingangCatOptions('${s.id}')">
           <option value="expense">Ausgabe</option>
           <option value="income">Einnahme</option>
         </select>
         <select class="cat-edit-select" id="eingangCat_${s.id}"></select>
-        <button title="Beleg ansehen" onclick="viewEingangBeleg(${s.id})">📎</button>
-        <button title="Übernehmen" onclick="convertEingang(${s.id})" style="color:var(--green)">✅</button>
-        <button title="Verwerfen" onclick="dismissEingang(${s.id})">✕</button>
+        <button title="Beleg ansehen" onclick="viewEingangBeleg('${s.id}')">📎</button>
+        <button title="Übernehmen" onclick="convertEingang('${s.id}')" style="color:var(--green)">✅</button>
+        <button title="Verwerfen" onclick="dismissEingang('${s.id}')">✕</button>
       </div>
     `).join('');
     queue.forEach(s => updateEingangCatOptions(s.id));
@@ -1907,6 +1913,10 @@
     const cats = getCategories(type);
     return cats.includes('Sonstiges') ? 'Sonstiges' : cats[0];
   }
+  async function removeEingangFiles(sub) {
+    try { await eingangFolderHandle.removeEntry(sub.fileName); } catch {}
+    try { await eingangFolderHandle.removeEntry(sub.id); } catch {}
+  }
   async function convertEingang(id) {
     const typeSel = document.getElementById(`eingangType_${id}`);
     const catSel = document.getElementById(`eingangCat_${id}`);
@@ -1949,9 +1959,7 @@
     });
     save(type, entries);
 
-    const remaining = queue.filter(s => s.id !== id);
-    await saveEingaenge(remaining);
-    try { await eingangFolderHandle.removeEntry(sub.fileName); } catch {}
+    await removeEingangFiles(sub);
 
     render();
     renderEingaenge();
@@ -1962,9 +1970,7 @@
     (async () => {
       const queue = await loadEingaenge();
       const sub = queue.find(s => s.id === id);
-      const remaining = queue.filter(s => s.id !== id);
-      await saveEingaenge(remaining);
-      if (sub) { try { await eingangFolderHandle.removeEntry(sub.fileName); } catch {} }
+      if (sub) await removeEingangFiles(sub);
       renderEingaenge();
       toast('🗑 Eingang verworfen');
     })();

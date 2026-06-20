@@ -29,12 +29,6 @@
   .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
   .card h2 { font-size: 1rem; margin-bottom: 6px; }
   .card p.hint { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
-  .setup-steps { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .setup-steps li { counter-increment: step; font-size: 0.85rem; color: var(--text); padding-left: 30px; position: relative; line-height: 1.4; }
-  .setup-steps li::before {
-    content: counter(step); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%;
-    background: var(--blue); color: white; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
-  }
   .field-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
   .field-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
   .field-group input, .field-group textarea, .field-group select {
@@ -44,20 +38,10 @@
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .btn { border: none; border-radius: 8px; padding: 12px 20px; font-size: 0.95rem; font-weight: 700; cursor: pointer; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
   .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .btn-blue { background: var(--blue); color: white; }
   .btn-green { background: var(--green); color: white; }
   .btn-gray { background: var(--border); color: var(--text); }
-  .btn-sm { padding: 7px 14px; font-size: 0.82rem; width: auto; }
-  .location-box {
-    background: var(--gray); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;
-  }
-  .location-box.linked { background: var(--green-light); border-color: #86efac; }
-  .location-box .loc-text { flex: 1; min-width: 160px; }
-  .location-box .loc-title { font-weight: 700; font-size: 0.86rem; }
-  .location-box.linked .loc-title { color: var(--green); }
-  .location-box .loc-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
-  .unsupported-note { font-size: 0.8rem; color: #92400e; background: var(--orange-light); border: 1px solid var(--orange); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; display: none; }
   .file-row { display: flex; align-items: center; gap: 10px; }
   .file-row label.file-label {
     display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--blue);
@@ -83,30 +67,6 @@
 </header>
 
 <main>
-  <div class="card" id="connectCard">
-    <h2>📥 Einmalige Einrichtung</h2>
-    <div id="setupIntro">
-      <p class="hint">Das musst du nur <strong>beim allerersten Mal</strong> machen — danach merkt sich dieser Browser die Verbindung dauerhaft, du musst es nie wieder tun.</p>
-      <ol class="setup-steps">
-        <li>Klicke unten auf den Button.</li>
-        <li>Es öffnet sich ein Auswahlfenster deines Browsers/Betriebssystems.</li>
-        <li>Wähle dort genau den Ordner aus, den du vom Verein genannt bekommen hast (z. B. den „Eingang"-Ordner auf dem Storage Share).</li>
-        <li>Fertig — danach kannst du sofort Belege einreichen.</li>
-      </ol>
-    </div>
-    <div class="location-box" id="locationBox">
-      <div class="loc-text">
-        <div class="loc-title" id="locTitle">Noch nicht verbunden</div>
-        <div class="loc-sub" id="locSub">Bitte einmal mit dem Eingangsordner verbinden.</div>
-      </div>
-      <button class="btn btn-blue btn-sm" id="locReconnectBtn" style="display:none" onclick="reconnectFolder()">🔌 Verbinden</button>
-    </div>
-    <button class="btn btn-blue" id="locConnectBtn" onclick="pickFolder()">🔌 Jetzt einmalig verbinden</button>
-    <div class="unsupported-note" id="unsupportedNote">
-      ⚠️ Dein Browser unterstützt das nicht (funktioniert in Chrome/Edge, nicht in Firefox/Safari). Bitte mit Chrome oder Edge öffnen.
-    </div>
-  </div>
-
   <div class="card" id="formCard">
     <h2>📝 Beleg-Angaben</h2>
     <div class="field-group">
@@ -139,13 +99,13 @@
       <label>Notiz (optional)</label>
       <textarea id="subNote" rows="2" placeholder="Zusätzliche Infos für den Kassierer"></textarea>
     </div>
-    <button class="btn btn-green" onclick="submitReceipt()">✅ Beleg einreichen</button>
+    <button class="btn btn-green" id="submitBtn" onclick="submitReceipt()">✅ Beleg einreichen</button>
   </div>
 
   <div class="card success-box" id="successBox">
     <div class="big">✅</div>
     <h2>Beleg eingereicht!</h2>
-    <p>Danke! Der Beleg liegt jetzt im Eingangs-Ordner und wird vom Kassierer übernommen.</p>
+    <p>Danke! Der Beleg wurde übermittelt und wird vom Kassierer übernommen.</p>
     <button class="btn btn-blue" onclick="resetForm()">➕ Weiteren Beleg einreichen</button>
   </div>
 </main>
@@ -153,130 +113,12 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const FS_API_SUPPORTED = 'showDirectoryPicker' in window;
-  let folderHandle = null;
-  let needsReconnect = false;
+  // Cloudflare-Worker-Proxy nimmt den Upload entgegen und leitet ihn
+  // server-seitig per WebDAV an Nextcloud weiter (umgeht das CORS-Problem
+  // direkter Browser-Uploads zum Storage Share). Siehe worker.js im Repo.
+  const WORKER_URL = 'WORKER_URL_HIER_EINTRAGEN';
+
   let pendingFile = null;
-
-  function idbOpen() {
-    return new Promise((resolve, reject) => {
-      const req = indexedDB.open('vereinsbudget_eingang_fs', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('handles');
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
-  async function idbSet(handle) {
-    const db = await idbOpen();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('handles', 'readwrite');
-      tx.objectStore('handles').put(handle, 'eingangFolder');
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-  async function idbGet() {
-    const db = await idbOpen();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('handles', 'readonly');
-      const req = tx.objectStore('handles').get('eingangFolder');
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => reject(req.error);
-    });
-  }
-  async function idbClear() {
-    const db = await idbOpen();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction('handles', 'readwrite');
-      tx.objectStore('handles').delete('eingangFolder');
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  }
-  async function verifyPermission(handle, mode) {
-    const opts = { mode };
-    if ((await handle.queryPermission(opts)) === 'granted') return true;
-    if ((await handle.requestPermission(opts)) === 'granted') return true;
-    return false;
-  }
-
-  async function pickFolder() {
-    if (!FS_API_SUPPORTED) return toast('⚠️ Browser nicht unterstützt — nutze Chrome/Edge.');
-    try {
-      const handle = await window.showDirectoryPicker();
-      folderHandle = handle;
-      needsReconnect = false;
-      await idbSet(handle);
-      updateLocationUI();
-      toast(`✅ Verbunden mit Eingangsordner: ${handle.name}`);
-    } catch (e) {
-      if (e.name !== 'AbortError') toast('❌ Verbindung fehlgeschlagen.');
-    }
-  }
-  async function reconnectFolder() {
-    if (!folderHandle) return;
-    const ok = await verifyPermission(folderHandle, 'readwrite');
-    if (!ok) return toast('❌ Zugriff verweigert.');
-    needsReconnect = false;
-    updateLocationUI();
-  }
-  async function restoreFolder() {
-    if (!FS_API_SUPPORTED) {
-      document.getElementById('unsupportedNote').style.display = 'block';
-      updateLocationUI();
-      return;
-    }
-    try {
-      const handle = await idbGet();
-      if (handle) {
-        folderHandle = handle;
-        const state = await handle.queryPermission({ mode: 'readwrite' });
-        needsReconnect = state !== 'granted';
-      }
-    } catch {}
-    updateLocationUI();
-  }
-  function updateLocationUI() {
-    const box = document.getElementById('locationBox');
-    const title = document.getElementById('locTitle');
-    const sub = document.getElementById('locSub');
-    const reconnectBtn = document.getElementById('locReconnectBtn');
-    const connectBtn = document.getElementById('locConnectBtn');
-    const setupIntro = document.getElementById('setupIntro');
-    const needsConnect = !folderHandle || needsReconnect;
-    reconnectBtn.style.display = (folderHandle && needsReconnect) ? 'inline-flex' : 'none';
-    connectBtn.style.display = !folderHandle ? 'inline-flex' : 'none';
-    setupIntro.style.display = (folderHandle && !needsReconnect) ? 'none' : 'block';
-    if (folderHandle) {
-      box.classList.add('linked');
-      title.textContent = needsReconnect ? 'Verbindung unterbrochen' : `✅ Verbunden mit Eingangsordner`;
-      sub.textContent = needsReconnect ? 'Bitte „Verbinden" klicken, um Zugriff zu bestätigen.' : 'Belege werden direkt hier abgelegt.';
-    } else {
-      box.classList.remove('linked');
-      title.textContent = 'Noch nicht verbunden';
-      sub.textContent = 'Bitte einmal mit dem Eingangsordner verbinden.';
-    }
-  }
-
-  function sanitizeFilename(name) { return name.replace(/[^a-zA-Z0-9._-]/g, '_'); }
-
-  function fileExtension(filename) {
-    const idx = filename.lastIndexOf('.');
-    return idx >= 0 ? filename.slice(idx) : '';
-  }
-  async function getUniqueFileName(dir, baseName, ext) {
-    let candidate = `${baseName}${ext}`;
-    let counter = 2;
-    while (true) {
-      try {
-        await dir.getFileHandle(candidate, { create: false });
-        candidate = `${baseName}_${counter}${ext}`;
-        counter++;
-      } catch {
-        return candidate; // existiert noch nicht -> frei
-      }
-    }
-  }
 
   function handleFileSelect(e) {
     const file = e.target.files[0];
@@ -286,9 +128,8 @@
   }
 
   async function submitReceipt() {
-    if (!folderHandle) return toast('⚠️ Bitte zuerst den Eingangs-Ordner festlegen.');
     const name = document.getElementById('subName').value.trim();
-    const amount = parseFloat(document.getElementById('subAmount').value);
+    const amount = document.getElementById('subAmount').value;
     const date = document.getElementById('subDate').value || new Date().toISOString().slice(0,10);
     const desc = document.getElementById('subDesc').value.trim();
     const note = document.getElementById('subNote').value.trim();
@@ -296,39 +137,29 @@
     if (!desc) return toast('Bitte eine Beschreibung eingeben.');
     if (!pendingFile) return toast('Bitte einen Beleg (Foto/PDF) auswählen.');
 
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Wird gesendet…';
     try {
-      const ok = await verifyPermission(folderHandle, 'readwrite');
-      if (!ok) { needsReconnect = true; updateLocationUI(); return toast('❌ Schreibrechte verweigert.'); }
+      const form = new FormData();
+      form.append('name', name);
+      form.append('amount', amount);
+      form.append('date', date);
+      form.append('desc', desc);
+      form.append('note', note);
+      form.append('file', pendingFile);
 
-      const ext = fileExtension(pendingFile.name);
-      const baseName = `${sanitizeFilename(date)}_${sanitizeFilename(desc)}_${sanitizeFilename(name)}`;
-      const uniqueName = await getUniqueFileName(folderHandle, baseName, ext);
-      const fileHandle = await folderHandle.getFileHandle(uniqueName, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(pendingFile);
-      await writable.close();
-
-      let queue = [];
-      try {
-        const qHandle = await folderHandle.getFileHandle('eingaenge.json');
-        const qFile = await qHandle.getFile();
-        queue = JSON.parse(await qFile.text()) || [];
-      } catch {}
-      queue.push({
-        id: Date.now(),
-        name, amount: isNaN(amount) ? null : amount, date, desc, note,
-        fileName: uniqueName, fileMime: pendingFile.type || 'application/octet-stream', fileOrigName: pendingFile.name,
-        submittedAt: new Date().toISOString()
-      });
-      const qHandleW = await folderHandle.getFileHandle('eingaenge.json', { create: true });
-      const qWritable = await qHandleW.createWritable();
-      await qWritable.write(JSON.stringify(queue, null, 2));
-      await qWritable.close();
+      const res = await fetch(WORKER_URL, { method: 'POST', body: form });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok || !result.ok) throw new Error(result.error || `Server-Fehler (${res.status})`);
 
       document.getElementById('formCard').style.display = 'none';
       document.getElementById('successBox').style.display = 'block';
     } catch (e) {
       toast('❌ Einreichen fehlgeschlagen: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✅ Beleg einreichen';
     }
   }
 
@@ -354,7 +185,6 @@
   document.getElementById('subDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('subName').value = localStorage.getItem('eingang_username') || '';
   document.getElementById('subName').addEventListener('input', e => localStorage.setItem('eingang_username', e.target.value.trim()));
-  restoreFolder();
 </script>
 </body>
 </html>
