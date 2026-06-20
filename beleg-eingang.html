@@ -29,6 +29,12 @@
   .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
   .card h2 { font-size: 1rem; margin-bottom: 6px; }
   .card p.hint { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+  .setup-steps { list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .setup-steps li { counter-increment: step; font-size: 0.85rem; color: var(--text); padding-left: 30px; position: relative; line-height: 1.4; }
+  .setup-steps li::before {
+    content: counter(step); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--blue); color: white; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
   .field-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
   .field-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
   .field-group input, .field-group textarea, .field-group select {
@@ -77,17 +83,25 @@
 </header>
 
 <main>
-  <div class="card">
-    <h2>📥 Eingangs-Ordner</h2>
-    <p class="hint">Der Eingangsordner wird vom Budgetverantwortlichen festgelegt — du musst hier nur einmal verbinden (du bekommst den Ordner vom Verein genannt, z. B. den gemappten „Eingang"-Ordner auf dem Storage Share).</p>
+  <div class="card" id="connectCard">
+    <h2>📥 Einmalige Einrichtung</h2>
+    <div id="setupIntro">
+      <p class="hint">Das musst du nur <strong>beim allerersten Mal</strong> machen — danach merkt sich dieser Browser die Verbindung dauerhaft, du musst es nie wieder tun.</p>
+      <ol class="setup-steps">
+        <li>Klicke unten auf den Button.</li>
+        <li>Es öffnet sich ein Auswahlfenster deines Browsers/Betriebssystems.</li>
+        <li>Wähle dort genau den Ordner aus, den du vom Verein genannt bekommen hast (z. B. den „Eingang"-Ordner auf dem Storage Share).</li>
+        <li>Fertig — danach kannst du sofort Belege einreichen.</li>
+      </ol>
+    </div>
     <div class="location-box" id="locationBox">
       <div class="loc-text">
         <div class="loc-title" id="locTitle">Noch nicht verbunden</div>
         <div class="loc-sub" id="locSub">Bitte einmal mit dem Eingangsordner verbinden.</div>
       </div>
       <button class="btn btn-blue btn-sm" id="locReconnectBtn" style="display:none" onclick="reconnectFolder()">🔌 Verbinden</button>
-      <button class="btn btn-blue btn-sm" id="locConnectBtn" onclick="pickFolder()">🔌 Mit Eingangsordner verbinden</button>
     </div>
+    <button class="btn btn-blue" id="locConnectBtn" onclick="pickFolder()">🔌 Jetzt einmalig verbinden</button>
     <div class="unsupported-note" id="unsupportedNote">
       ⚠️ Dein Browser unterstützt das nicht (funktioniert in Chrome/Edge, nicht in Firefox/Safari). Bitte mit Chrome oder Edge öffnen.
     </div>
@@ -228,9 +242,11 @@
     const sub = document.getElementById('locSub');
     const reconnectBtn = document.getElementById('locReconnectBtn');
     const connectBtn = document.getElementById('locConnectBtn');
+    const setupIntro = document.getElementById('setupIntro');
     const needsConnect = !folderHandle || needsReconnect;
     reconnectBtn.style.display = (folderHandle && needsReconnect) ? 'inline-flex' : 'none';
     connectBtn.style.display = !folderHandle ? 'inline-flex' : 'none';
+    setupIntro.style.display = (folderHandle && !needsReconnect) ? 'none' : 'block';
     if (folderHandle) {
       box.classList.add('linked');
       title.textContent = needsReconnect ? 'Verbindung unterbrochen' : `✅ Verbunden mit Eingangsordner`;
