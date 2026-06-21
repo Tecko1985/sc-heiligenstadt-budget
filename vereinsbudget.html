@@ -882,7 +882,7 @@
     const sel = document.getElementById(type === 'income' ? 'incCat' : 'expCat');
     const prev = sel.value;
     const cats = getCategories(type);
-    sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    sel.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     if (cats.includes(prev)) sel.value = prev;
   }
   function renderCatChips(type) {
@@ -1020,7 +1020,7 @@
     const cats = getCategories(type);
     const select = document.createElement('select');
     select.className = 'cat-edit-select';
-    select.innerHTML = cats.map(c => `<option value="${c}" ${c === entry.cat ? 'selected' : ''}>${c}</option>`).join('');
+    select.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}" ${c === entry.cat ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
     select.onclick = ev => ev.stopPropagation();
     select.onchange = () => {
       entry.cat = select.value;
@@ -1553,11 +1553,11 @@
     function rowsHtml(entries) {
       return entries.map(e => `<tr>
         <td>${e.date}</td>
-        <td>${e.cat}</td>
-        <td>${e.desc}</td>
+        <td>${escapeHtml(e.cat)}</td>
+        <td>${escapeHtml(e.desc)}</td>
         <td class="print-amount">${fmt(e.amount)}</td>
-        <td>${e.attachment ? `<span class="print-receipt-ref">📎 ${e.attachment.name}</span>` : '–'}</td>
-        <td>${e.enteredBy || '–'}</td>
+        <td>${e.attachment ? `<span class="print-receipt-ref">📎 ${escapeHtml(e.attachment.name)}</span>` : '–'}</td>
+        <td>${escapeHtml(e.enteredBy) || '–'}</td>
       </tr>`).join('');
     }
     async function receiptPagesHtml(entries, typeLabel) {
@@ -1580,7 +1580,7 @@
           bodyHtml = `<div class="print-receipt-missing-block">Dieser Dateityp kann nicht angezeigt werden: ${att.name}</div>`;
         }
         html += `<div class="print-receipt-page">
-          <div class="print-receipt-header">📎 Beleg zu „${e.desc}" — ${fmt(e.amount)} — ${e.date} (${typeLabel})</div>
+          <div class="print-receipt-header">📎 Beleg zu „${escapeHtml(e.desc)}" — ${fmt(e.amount)} — ${e.date} (${typeLabel})</div>
           ${bodyHtml}
         </div>`;
       }
@@ -1637,6 +1637,9 @@
   // ── Render ─────────────────────────────────────────────────────────────────
   function fmt(n) {
     return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
   function render() {
     const incomes  = load('income');
@@ -1836,7 +1839,7 @@
           const file = await fh.getFile();
           const meta = JSON.parse(await file.text());
           const base = metaName.slice(0, -'.meta.json'.length);
-          const fileName = allNames.find(n => n !== metaName && n.startsWith(base + '.'));
+          const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
           if (!fileName) continue;
           queue.push({ id: metaName, fileName, ...meta });
         } catch {}
@@ -1854,8 +1857,8 @@
     list.innerHTML = queue.slice().reverse().map(s => `
       <div class="wish-item" style="flex-wrap:wrap;">
         <div class="wish-text" style="flex:1 1 100%;">
-          <strong>${s.desc}</strong>${s.amount ? ' — ' + fmt(s.amount) : ''}
-          <div class="wish-meta">${s.date} · von ${s.name}${s.note ? ' · „' + s.note + '"' : ''}</div>
+          <strong>${escapeHtml(s.desc)}</strong>${s.amount ? ' — ' + fmt(s.amount) : ''}
+          <div class="wish-meta">${s.date} · von ${escapeHtml(s.name)}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
         </div>
         <select class="cat-edit-select" id="eingangType_${s.id}" onchange="updateEingangCatOptions('${s.id}')">
           <option value="expense">Ausgabe</option>
@@ -1876,7 +1879,7 @@
     const type = typeSel.value;
     const cats = getCategories(type);
     const prev = catSel.value;
-    catSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    catSel.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     catSel.value = cats.includes(prev) ? prev : defaultCategoryFor(type);
   }
   async function viewEingangBeleg(id) {
@@ -2138,7 +2141,7 @@
     const sel = document.getElementById(type === 'income' ? 'incFilterCat' : 'expFilterCat');
     const prev = sel.value;
     const cats = getCategories(type);
-    sel.innerHTML = '<option value="">Alle</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    sel.innerHTML = '<option value="">Alle</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     if (cats.includes(prev)) sel.value = prev;
   }
   function applyListFilters(type) {
@@ -2184,10 +2187,10 @@
     const hasFile = !!e.attachment;
     const attIcon = hasFile ? (e.attachment.external ? '📁' : '📎') : '➕📎';
     return `<li class="entry-item">
-      <span class="cat" title="Klicken zum Ändern der Kategorie" onclick="editEntryCategory(this,'${type}', ${e.id})">${e.cat}</span>
-      <span class="desc">${e.desc}<br><small style="color:var(--muted)">${e.date} · von ${e.enteredBy || 'Unbekannt'}</small></span>
+      <span class="cat" title="Klicken zum Ändern der Kategorie" onclick="editEntryCategory(this,'${type}', ${e.id})">${escapeHtml(e.cat)}</span>
+      <span class="desc">${escapeHtml(e.desc)}<br><small style="color:var(--muted)">${e.date} · von ${escapeHtml(e.enteredBy) || 'Unbekannt'}</small></span>
       <span class="val ${type === 'income' ? 'pos' : 'neg'}">${fmt(e.amount)}</span>
-      <button class="attach-btn ${hasFile ? 'has-file' : ''}" title="${hasFile ? 'Beleg ansehen: ' + e.attachment.name + (e.attachment.external ? ' (im Ordner)' : ' (eingebettet)') : 'Beleg anhängen'}" onclick="viewAttachment('${type}', ${e.id})">${attIcon}</button>
+      <button class="attach-btn ${hasFile ? 'has-file' : ''}" title="${hasFile ? 'Beleg ansehen: ' + escapeHtml(e.attachment.name) + (e.attachment.external ? ' (im Ordner)' : ' (eingebettet)') : 'Beleg anhängen'}" onclick="viewAttachment('${type}', ${e.id})">${attIcon}</button>
       ${hasFile ? `<button class="icon-btn" title="Beleg entfernen" onclick="removeAttachment('${type}', ${e.id})" style="font-size:0.8rem">🗑📎</button>` : ''}
       <button class="icon-btn" title="Eintrag löschen" onclick="deleteEntry('${type}', ${e.id})">✕</button>
     </li>`;
