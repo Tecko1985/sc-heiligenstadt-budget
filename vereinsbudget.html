@@ -1914,8 +1914,10 @@
     return cats.includes('Sonstiges') ? 'Sonstiges' : cats[0];
   }
   async function removeEingangFiles(sub) {
-    try { await eingangFolderHandle.removeEntry(sub.fileName); } catch {}
-    try { await eingangFolderHandle.removeEntry(sub.id); } catch {}
+    let ok = true;
+    try { await eingangFolderHandle.removeEntry(sub.fileName); } catch (e) { ok = false; }
+    try { await eingangFolderHandle.removeEntry(sub.id); } catch (e) { ok = false; }
+    return ok;
   }
   async function convertEingang(id) {
     const typeSel = document.getElementById(`eingangType_${id}`);
@@ -1959,20 +1961,25 @@
     });
     save(type, entries);
 
-    await removeEingangFiles(sub);
+    const deleted = await removeEingangFiles(sub);
 
     render();
     renderEingaenge();
-    toast(`✅ Übernommen als ${type === 'income' ? 'Einnahme' : 'Ausgabe'} — Kategorie kann in der Liste angepasst werden`);
+    if (deleted) {
+      toast(`✅ Übernommen als ${type === 'income' ? 'Einnahme' : 'Ausgabe'} — Kategorie kann in der Liste angepasst werden`);
+    } else {
+      toast('⚠️ Übernommen, aber Beleg-Dateien im Eingangs-Ordner konnten nicht gelöscht werden — Ordner neu verknüpfen und Datei manuell löschen.');
+    }
   }
   function dismissEingang(id) {
     if (!confirm('Diesen Eingang verwerfen (ohne zu übernehmen)?')) return;
     (async () => {
       const queue = await loadEingaenge();
       const sub = queue.find(s => s.id === id);
-      if (sub) await removeEingangFiles(sub);
+      let deleted = true;
+      if (sub) deleted = await removeEingangFiles(sub);
       renderEingaenge();
-      toast('🗑 Eingang verworfen');
+      toast(deleted ? '🗑 Eingang verworfen' : '⚠️ Verworfen, aber Datei im Eingangs-Ordner konnte nicht gelöscht werden — Ordner neu verknüpfen.');
     })();
   }
   // ── Änderungswünsche ─────────────────────────────────────────────────────
