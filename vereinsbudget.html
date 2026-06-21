@@ -1104,7 +1104,7 @@
 
     if (att.external) {
       if (!linkedFolderHandle) {
-        body.innerHTML = `<p style="color:var(--muted)">⚠️ Beleg „${att.name}" liegt im verknüpften Belege-Ordner, der auf diesem Gerät noch nicht verbunden ist. Bitte oben unter „📁 Ordner festlegen" denselben Ordner verknüpfen.</p>`;
+        body.innerHTML = `<p style="color:var(--muted)">⚠️ Beleg „${escapeHtml(att.name)}" liegt im verknüpften Belege-Ordner, der auf diesem Gerät noch nicht verbunden ist. Bitte oben unter „📁 Ordner festlegen" denselben Ordner verknüpfen.</p>`;
         document.getElementById('lightboxOverlay').classList.add('show');
         return;
       }
@@ -1513,7 +1513,7 @@
     const rows = [['Typ','Kategorie','Beschreibung','Betrag (€)','Datum','Beleg','Erfasst von']];
     incomes.forEach(e  => rows.push(['Einnahme', e.cat, e.desc, e.amount.toFixed(2), e.date, e.attachment ? e.attachment.name : '', e.enteredBy || '']));
     expenses.forEach(e => rows.push(['Ausgabe',  e.cat, e.desc, e.amount.toFixed(2), e.date, e.attachment ? e.attachment.name : '', e.enteredBy || '']));
-    const csv = rows.map(r => r.map(c => `"${c}"`).join(';')).join('\n');
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
     download(`vereinsbudget_${currentSeason.replace('/','')}.csv`, 'text/csv', '﻿' + csv);
     toast('📊 CSV exportiert — öffne sie direkt in Excel');
   }
@@ -1577,7 +1577,7 @@
             ? `<embed class="print-receipt-pdf" src="${src}" type="application/pdf" />`
             : `<div class="print-receipt-missing-block">⚠️ PDF konnte nicht geladen werden (${unavailableReason(att)})</div>`;
         } else {
-          bodyHtml = `<div class="print-receipt-missing-block">Dieser Dateityp kann nicht angezeigt werden: ${att.name}</div>`;
+          bodyHtml = `<div class="print-receipt-missing-block">Dieser Dateityp kann nicht angezeigt werden: ${escapeHtml(att.name)}</div>`;
         }
         html += `<div class="print-receipt-page">
           <div class="print-receipt-header">📎 Beleg zu „${escapeHtml(e.desc)}" — ${fmt(e.amount)} — ${e.date} (${typeLabel})</div>
