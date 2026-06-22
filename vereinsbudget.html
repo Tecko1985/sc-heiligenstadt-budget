@@ -1312,18 +1312,28 @@
     const el = document.getElementById('missingLinksBar');
     if (!el) return;
     const items = [];
+    let reconnectCount = 0;
     if (FS_API_SUPPORTED) {
       if (!linkedFileHandle) items.push(['📌 Speicherort verknüpfen', 'pickFileLocation()']);
-      else if (fileNeedsReconnect) items.push(['🔌 Speicherort verbinden', 'reconnectFileLocation()']);
+      else if (fileNeedsReconnect) { items.push(['🔌 Speicherort verbinden', 'reconnectFileLocation()']); reconnectCount++; }
     }
     if (DIR_API_SUPPORTED) {
       if (!linkedFolderHandle) items.push(['📁 Belege-Ordner verknüpfen', 'pickBelegeFolder()']);
       if (!eingangFolderHandle) items.push(['📥 Eingangs-Ordner verknüpfen', 'pickEingangFolder()']);
-      else if (eingangNeedsReconnect) items.push(['🔌 Eingangs-Ordner verbinden', 'reconnectEingangFolder()']);
+      else if (eingangNeedsReconnect) { items.push(['🔌 Eingangs-Ordner verbinden', 'reconnectEingangFolder()']); reconnectCount++; }
       if (!backupFolderHandle) items.push(['🗄️ Backup-Ordner verknüpfen', 'pickBackupFolder()']);
-      else if (backupFolderNeedsReconnect) items.push(['🔌 Backup-Ordner verbinden', 'reconnectBackupFolder()']);
+      else if (backupFolderNeedsReconnect) { items.push(['🔌 Backup-Ordner verbinden', 'reconnectBackupFolder()']); reconnectCount++; }
     }
-    el.innerHTML = items.map(([label, fn]) => `<button class="btn btn-orange btn-sm" onclick="${fn}">${label}</button>`).join('');
+    let html = items.map(([label, fn]) => `<button class="btn btn-orange btn-sm" onclick="${fn}">${label}</button>`).join('');
+    if (reconnectCount > 1) {
+      html = `<button class="btn btn-orange btn-sm" onclick="reconnectAll()">🔌 Alle verbinden</button>` + html;
+    }
+    el.innerHTML = html;
+  }
+  async function reconnectAll() {
+    if (fileNeedsReconnect) await reconnectFileLocation();
+    if (eingangNeedsReconnect) await reconnectEingangFolder();
+    if (backupFolderNeedsReconnect) await reconnectBackupFolder();
   }
   function sanitizeFilename(name) {
     return name.replace(/[^a-zA-Z0-9._-]/g, '_');
