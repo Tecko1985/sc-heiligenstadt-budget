@@ -105,6 +105,12 @@
     <h2>📋 Eingegangene Belege</h2>
     <div id="entryList"><div class="empty">Bitte zuerst einen Eingangs-Ordner verknüpfen.</div></div>
   </div>
+
+  <div class="card">
+    <h2 style="cursor:pointer;" onclick="toggleArchive()">📦 Erledigte Belege <span id="archiveToggleArrow">▸</span></h2>
+    <p class="hint">Bereits abgelegte Belege — zur Nachverfolgung, nicht mehr in der aktiven Liste.</p>
+    <div id="archiveList" style="display:none"><div class="empty">Noch nicht geladen.</div></div>
+  </div>
 </main>
 
 <div class="lightbox-overlay" id="lightboxOverlay" onclick="if(event.target===this) closeLightbox()">
@@ -249,19 +255,19 @@
   }
 
   // ── Belege laden/anzeigen ────────────────────────────────────────────────
-  async function loadEntries() {
-    if (!folderHandle) return [];
+  async function loadEntriesFrom(dirHandle) {
+    if (!dirHandle) return [];
     try {
-      const ok = await verifyPermission(folderHandle, 'read');
+      const ok = await verifyPermission(dirHandle, 'read');
       if (!ok) return [];
       const allNames = [];
-      for await (const [name, handle] of folderHandle.entries()) {
+      for await (const [name, handle] of dirHandle.entries()) {
         if (handle.kind === 'file') allNames.push(name);
       }
       const queue = [];
       for (const metaName of allNames.filter(n => n.endsWith('.meta.json'))) {
         try {
-          const fh = await folderHandle.getFileHandle(metaName);
+          const fh = await dirHandle.getFileHandle(metaName);
           const file = await fh.getFile();
           const meta = JSON.parse(await file.text());
           const base = metaName.slice(0, -'.meta.json'.length);
@@ -273,6 +279,17 @@
       queue.sort((a, b) => (a.submittedAt || '').localeCompare(b.submittedAt || ''));
       return queue;
     } catch { return []; }
+  }
+  async function loadEntries() {
+    return loadEntriesFrom(folderHandle);
+  }
+  async function getErledigtDir(create) {
+    if (!folderHandle) return null;
+    try { return await folderHandle.getDirectoryHandle('Erledigt', { create: !!create }); }
+    catch { return null; }
+  }
+  async function loadArchivedEntries() {
+    return loadEntriesFrom(await getErledigtDir(false));
   }
   let editingId = null;
   async function renderEntries() {
@@ -298,6 +315,12 @@
             <input type="checkbox" ${s.reviewedByGS ? 'checked' : ''} onchange="setReviewed('${s.id}', this.checked)" />
             Geprüft
           </label>
+          ${s.reviewedByGS ? `
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;">
+            <input type="checkbox" onchange="archiveEntry('${s.id}', this)" />
+            Erledigt
+          </label>
+          ` : ''}
           <button class="btn btn-red btn-sm" onclick="deleteEntry('${s.id}')">🗑 Löschen</button>
         </div>
         ${editingId === s.id ? `
@@ -368,6 +391,115 @@
     if (!sub) return;
     const ok = await writeMeta(sub, { reviewedByGS: checked });
     if (ok) { toast(checked ? '✅ Als geprüft markiert.' : '↩️ Prüf-Markierung entfernt.'); await renderEntries(); }
+  }
+  async function archiveEntry(id, checkboxEl) {
+    if (checkboxEl && !checkboxEl.checked) return;
+    const queue = await loadEntries();
+    const sub = queue.find(s => s.id === id);
+    if (!sub) { if (checkboxEl) checkboxEl.checked = false; return; }
+    if (!confirm(`„${sub.desc}" von ${sub.name} als erledigt ablegen? Der Eintrag verschwindet dann aus dieser Liste und aus dem Vereinsbudget (Beleg + Daten bleiben im Unterordner „Erledigt" erhalten).`)) {
+      if (checkboxEl) checkboxEl.checked = false;
+      return;
+    }
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) { toast('❌ Schreibrechte verweigert.'); if (checkboxEl) checkboxEl.checked = false; return; }
+    try {
+      const erledigtDir = await getErledigtDir(true);
+      for (const fileName of [sub.fileName, sub.id]) {
+        await moveFile(folderHandle, erledigtDir, fileName);
+      }
+      toast('📦 Als erledigt abgelegt.');
+      await renderEntries();
+      if (archiveOpen) await renderArchive();
+    } catch (e) {
+      toast('❌ Ablegen fehlgeschlagen: ' + e.message);
+      if (checkboxEl) checkboxEl.checked = false;
+    }
+  }
+  async function moveFile(srcDir, destDir, fileName) {
+    const srcHandle = await srcDir.getFileHandle(fileName);
+    const file = await srcHandle.getFile();
+    const destHandle = await destDir.getFileHandle(fileName, { create: true });
+    const writable = await destHandle.createWritable();
+    await writable.write(file);
+    await writable.close();
+    await srcDir.removeEntry(fileName);
+  }
+  let archiveOpen = false;
+  async function toggleArchive() {
+    archiveOpen = !archiveOpen;
+    document.getElementById('archiveList').style.display = archiveOpen ? 'block' : 'none';
+    document.getElementById('archiveToggleArrow').textContent = archiveOpen ? '▾' : '▸';
+    if (archiveOpen) await renderArchive();
+  }
+  async function renderArchive() {
+    const list = document.getElementById('archiveList');
+    if (!folderHandle) { list.innerHTML = '<div class="empty">Kein Eingangs-Ordner verknüpft.</div>'; return; }
+    const queue = await loadArchivedEntries();
+    if (!queue.length) { list.innerHTML = '<div class="empty">Noch keine erledigten Belege.</div>'; return; }
+    list.innerHTML = queue.slice().reverse().map(s => `
+      <div class="entry reviewed">
+        <div class="entry-top">
+          <div>
+            <div class="entry-desc">${escapeHtml(s.desc)}</div>
+            <div class="entry-meta">${escapeHtml(s.date || '')} · von ${escapeHtml(s.name || '')}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
+            ${s.gsNote ? `<div class="reviewed-tag">„${escapeHtml(s.gsNote)}"</div>` : ''}
+          </div>
+          <div class="entry-amount">${s.amount ? Number(s.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 }) + ' €' : ''}</div>
+        </div>
+        <div class="entry-actions">
+          <button class="btn btn-gray btn-sm" onclick="viewArchivedAttachment('${s.id}')">📎 Beleg ansehen</button>
+          <button class="btn btn-blue btn-sm" onclick="restoreEntry('${s.id}')">↩️ Zurückholen</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  async function restoreEntry(id) {
+    const erledigtDir = await getErledigtDir(false);
+    const queue = await loadEntriesFrom(erledigtDir);
+    const sub = queue.find(s => s.id === id);
+    if (!sub || !erledigtDir) return;
+    if (!confirm(`„${sub.desc}" von ${sub.name} wieder in die aktive Liste zurückholen?`)) return;
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) return toast('❌ Schreibrechte verweigert.');
+    try {
+      for (const fileName of [sub.fileName, sub.id]) {
+        await moveFile(erledigtDir, folderHandle, fileName);
+      }
+      toast('↩️ Zurückgeholt.');
+      await renderArchive();
+      await renderEntries();
+    } catch (e) {
+      toast('❌ Zurückholen fehlgeschlagen: ' + e.message);
+    }
+  }
+  async function viewArchivedAttachment(id) {
+    const erledigtDir = await getErledigtDir(false);
+    const queue = await loadEntriesFrom(erledigtDir);
+    const sub = queue.find(s => s.id === id);
+    if (!sub || !erledigtDir) return;
+    try {
+      const ok = await verifyPermission(erledigtDir, 'read');
+      if (!ok) return toast('❌ Leserechte verweigert.');
+      const fh = await erledigtDir.getFileHandle(sub.fileName);
+      const file = await fh.getFile();
+      const url = URL.createObjectURL(file);
+      currentLightboxObjectUrl = url;
+      document.getElementById('lightboxTitle').textContent = sub.fileOrigName || sub.fileName;
+      const body = document.getElementById('lightboxBody');
+      body.innerHTML = '';
+      const mime = file.type || sub.fileMime || '';
+      if (mime.startsWith('image/')) {
+        const img = document.createElement('img'); img.src = url; body.appendChild(img);
+      } else if (mime === 'application/pdf') {
+        const iframe = document.createElement('iframe'); iframe.src = url; body.appendChild(iframe);
+      } else {
+        body.innerHTML = '<p>Vorschau für diesen Dateityp nicht verfügbar.</p>';
+      }
+      document.getElementById('lightboxOverlay').classList.add('show');
+    } catch (e) {
+      toast('❌ Beleg konnte nicht geladen werden: ' + e.message);
+    }
   }
   async function deleteEntry(id) {
     const queue = await loadEntries();
