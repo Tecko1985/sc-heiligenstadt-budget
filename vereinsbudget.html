@@ -889,7 +889,7 @@
     const wrap = document.getElementById(type === 'income' ? 'incCatChips' : 'expCatChips');
     const cats = getCategories(type);
     wrap.innerHTML = cats.map(c => `
-      <span class="cat-chip">${c}<button title="Kategorie löschen" onclick="deleteCategory('${type}','${c.replace(/'/g,"\\'")}')">✕</button></span>
+      <span class="cat-chip">${escapeHtml(c)}<button title="Kategorie löschen" onclick="deleteCategory('${type}','${escapeJsAttr(c)}')">✕</button></span>
     `).join('');
   }
   function toggleCatManager(type) {
@@ -1114,7 +1114,7 @@
         currentLightboxObjectUrl = url;
         mime = file.type || att.mime;
       } catch (e) {
-        body.innerHTML = `<p style="color:var(--muted)">❌ Beleg konnte nicht geladen werden: ${e.message}</p>`;
+        body.innerHTML = `<p style="color:var(--muted)">❌ Beleg konnte nicht geladen werden: ${escapeHtml(e.message)}</p>`;
         document.getElementById('lightboxOverlay').classList.add('show');
         return;
       }
@@ -1331,9 +1331,11 @@
     el.innerHTML = html;
   }
   async function reconnectAll() {
-    if (fileNeedsReconnect) await reconnectFileLocation();
-    if (eingangNeedsReconnect) await reconnectEingangFolder();
-    if (backupFolderNeedsReconnect) await reconnectBackupFolder();
+    let failed = false;
+    if (fileNeedsReconnect) { try { await reconnectFileLocation(); } catch { failed = true; } }
+    if (eingangNeedsReconnect) { try { await reconnectEingangFolder(); } catch { failed = true; } }
+    if (backupFolderNeedsReconnect) { try { await reconnectBackupFolder(); } catch { failed = true; } }
+    if (failed) toast('⚠️ Nicht alle Verbindungen konnten wiederhergestellt werden — bitte einzeln erneut versuchen.');
   }
   function sanitizeFilename(name) {
     return name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -1650,6 +1652,9 @@
   }
   function escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function escapeJsAttr(str) {
+    return escapeHtml(String(str ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
   }
   function render() {
     const incomes  = load('income');
@@ -2009,7 +2014,7 @@
     if (!wishes.length) { list.innerHTML = '<div class="empty">Noch keine Änderungswünsche</div>'; return; }
     list.innerHTML = wishes.slice().reverse().map(w => `
       <div class="wish-item">
-        <div class="wish-text">${w.text}<div class="wish-meta">${new Date(w.date).toLocaleString('de-DE')} · von ${w.name || 'Unbekannt'}</div></div>
+        <div class="wish-text">${escapeHtml(w.text)}<div class="wish-meta">${new Date(w.date).toLocaleString('de-DE')} · von ${escapeHtml(w.name || 'Unbekannt')}</div></div>
         <button title="Wunsch löschen" onclick="deleteWish(${w.id})">✕</button>
       </div>
     `).join('');
@@ -2229,9 +2234,9 @@
       const li = document.createElement('li');
       li.className = 'entry-group';
       li.innerHTML = `
-        <button class="entry-group-header" onclick="toggleGroup('${type}','${g.cat.replace(/'/g,"\\'")}')">
+        <button class="entry-group-header" onclick="toggleGroup('${type}','${escapeJsAttr(g.cat)}')">
           <span class="entry-group-arrow">${isOpen ? '▾' : '▸'}</span>
-          <span class="entry-group-name">${g.cat}</span>
+          <span class="entry-group-name">${escapeHtml(g.cat)}</span>
           <span class="entry-group-count">${g.items.length}</span>
           <span class="entry-group-total ${type === 'income' ? 'pos' : 'neg'}">${fmt(g.total)}</span>
         </button>
