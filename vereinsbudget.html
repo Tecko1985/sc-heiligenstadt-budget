@@ -1874,6 +1874,7 @@
         <div class="wish-text" style="flex:1 1 100%;">
           <strong>${escapeHtml(s.desc)}</strong>${s.amount ? ' — ' + fmt(s.amount) : ''}
           <div class="wish-meta">${s.date} · von ${escapeHtml(s.name)}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
+          ${s.reviewedByGS ? `<div class="wish-meta" style="color:var(--green); font-weight:600;">✅ Geprüft von Geschäftsstelle${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
         </div>
         <select class="cat-edit-select" id="eingangType_${s.id}" onchange="updateEingangCatOptions('${s.id}')">
           <option value="expense">Ausgabe</option>
