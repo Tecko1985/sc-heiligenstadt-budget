@@ -1838,27 +1838,35 @@
       try { await backupFolderHandle.removeEntry(names[i]); } catch {}
     }
   }
+  async function scanEingangDir(dirHandle) {
+    const allNames = [];
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (handle.kind === 'file') allNames.push(name);
+    }
+    const queue = [];
+    for (const metaName of allNames.filter(n => n.endsWith('.meta.json'))) {
+      try {
+        const fh = await dirHandle.getFileHandle(metaName);
+        const file = await fh.getFile();
+        const meta = JSON.parse(await file.text());
+        const base = metaName.slice(0, -'.meta.json'.length);
+        const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
+        if (!fileName) continue;
+        queue.push({ id: metaName, fileName, ...meta, _dir: dirHandle });
+      } catch {}
+    }
+    return queue;
+  }
   async function loadEingaenge() {
     if (!eingangFolderHandle) return [];
     try {
       const ok = await verifyPermission(eingangFolderHandle, 'read');
       if (!ok) return [];
-      const allNames = [];
-      for await (const [name, handle] of eingangFolderHandle.entries()) {
-        if (handle.kind === 'file') allNames.push(name);
-      }
-      const queue = [];
-      for (const metaName of allNames.filter(n => n.endsWith('.meta.json'))) {
-        try {
-          const fh = await eingangFolderHandle.getFileHandle(metaName);
-          const file = await fh.getFile();
-          const meta = JSON.parse(await file.text());
-          const base = metaName.slice(0, -'.meta.json'.length);
-          const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
-          if (!fileName) continue;
-          queue.push({ id: metaName, fileName, ...meta });
-        } catch {}
-      }
+      let queue = await scanEingangDir(eingangFolderHandle);
+      try {
+        const erledigtDir = await eingangFolderHandle.getDirectoryHandle('Erledigt', { create: false });
+        queue = queue.concat(await scanEingangDir(erledigtDir));
+      } catch {}
       queue.sort((a, b) => (a.submittedAt || '').localeCompare(b.submittedAt || ''));
       return queue;
     } catch { return []; }
@@ -1874,7 +1882,7 @@
         <div class="wish-text" style="flex:1 1 100%;">
           <strong>${escapeHtml(s.desc)}</strong>${s.amount ? ' — ' + fmt(s.amount) : ''}
           <div class="wish-meta">${s.date} · von ${escapeHtml(s.name)}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
-          ${s.reviewedByGS ? `<div class="wish-meta" style="color:var(--green); font-weight:600;">✅ Geprüft von Geschäftsstelle${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
+          ${s.reviewedByGS ? `<div class="wish-meta" style="color:var(--green); font-weight:600;">✅ Geprüft${s._dir && s._dir.name === 'Erledigt' ? ' & abgelegt' : ''} von Geschäftsstelle${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
         </div>
         <select class="cat-edit-select" id="eingangType_${s.id}" onchange="updateEingangCatOptions('${s.id}')">
           <option value="expense">Ausgabe</option>
@@ -1905,7 +1913,7 @@
     try {
       const ok = await verifyPermission(eingangFolderHandle, 'read');
       if (!ok) return toast('❌ Leserechte verweigert.');
-      const fh = await eingangFolderHandle.getFileHandle(sub.fileName);
+      const fh = await (sub._dir || eingangFolderHandle).getFileHandle(sub.fileName);
       const file = await fh.getFile();
       const url = URL.createObjectURL(file);
       currentLightboxObjectUrl = url;
@@ -1933,9 +1941,10 @@
     return cats.includes('Sonstiges') ? 'Sonstiges' : cats[0];
   }
   async function removeEingangFiles(sub) {
+    const dir = sub._dir || eingangFolderHandle;
     let ok = true;
-    try { await eingangFolderHandle.removeEntry(sub.fileName); } catch (e) { ok = false; }
-    try { await eingangFolderHandle.removeEntry(sub.id); } catch (e) { ok = false; }
+    try { await dir.removeEntry(sub.fileName); } catch (e) { ok = false; }
+    try { await dir.removeEntry(sub.id); } catch (e) { ok = false; }
     return ok;
   }
   async function convertEingang(id) {
@@ -1952,7 +1961,7 @@
     try {
       const ok = await verifyPermission(eingangFolderHandle, 'read');
       if (ok) {
-        const fh = await eingangFolderHandle.getFileHandle(sub.fileName);
+        const fh = await (sub._dir || eingangFolderHandle).getFileHandle(sub.fileName);
         const file = await fh.getFile();
         if (linkedFolderHandle) {
           attachment = await writeAttachmentFile(file);
