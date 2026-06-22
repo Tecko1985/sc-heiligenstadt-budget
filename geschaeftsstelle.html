@@ -305,6 +305,10 @@
             if (!fileName) continue;
             files = [{ fileName, fileOrigName: meta.fileOrigName, fileMime: meta.fileMime }];
           }
+          // Migration: vormals galt eine einzelne reviewedByGS-Markierung fuer
+          // die ganze Einreichung. Beim ersten Laden nach dem Update wird sie
+          // auf jede Datei uebertragen, damit bereits geprueftes nicht verloren geht.
+          files = files.map(f => ({ ...f, reviewed: typeof f.reviewed === 'boolean' ? f.reviewed : !!meta.reviewedByGS }));
           queue.push({ id: metaName, fileName: files[0].fileName, files, ...meta });
         } catch {}
       }
@@ -330,24 +334,33 @@
     if (needsReconnect) { list.innerHTML = '<div class="empty">Bitte oben erst „Verbinden" klicken.</div>'; return; }
     const queue = await loadEntries();
     if (!queue.length) { list.innerHTML = '<div class="empty">Keine eingehenden Belege.</div>'; return; }
-    list.innerHTML = queue.slice().reverse().map(s => `
-      <div class="entry ${s.reviewedByGS ? 'reviewed' : ''}">
+    list.innerHTML = queue.slice().reverse().map(s => {
+      const files = s.files || [];
+      const allReviewed = files.length > 0 && files.every(f => f.reviewed);
+      return `
+      <div class="entry ${allReviewed ? 'reviewed' : ''}">
         <div class="entry-top">
           <div>
             <div class="entry-desc">${escapeHtml(s.desc)}</div>
             <div class="entry-meta">${escapeHtml(s.date || '')} · von ${escapeHtml(s.name || '')}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
-            ${s.reviewedByGS ? `<div class="reviewed-tag">✅ Geprüft von Geschäftsstelle${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
+            ${allReviewed ? `<div class="reviewed-tag">✅ Alle Belege geprüft${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
           </div>
           <div class="entry-amount">${s.amount ? Number(s.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 }) + ' €' : ''}</div>
         </div>
+        <div class="entry-files">
+          ${files.map((f, i) => `
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;">
+            <button class="btn btn-gray btn-sm" onclick="viewAttachment('${s.id}', ${i})">📎 ${escapeHtml(f.fileOrigName || `Beleg ${i + 1}`)}</button>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem;">
+              <input type="checkbox" ${f.reviewed ? 'checked' : ''} onchange="setFileReviewed('${s.id}', ${i}, this.checked)" />
+              Geprüft
+            </label>
+          </div>
+          `).join('')}
+        </div>
         <div class="entry-actions">
-          ${(s.files || []).map((f, i) => `<button class="btn btn-gray btn-sm" onclick="viewAttachment('${s.id}', ${i})">📎 ${escapeHtml(f.fileOrigName || `Beleg ${i + 1}`)}</button>`).join('')}
           <button class="btn btn-blue btn-sm" onclick="toggleEdit('${s.id}')">✏️ Bearbeiten</button>
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;">
-            <input type="checkbox" ${s.reviewedByGS ? 'checked' : ''} onchange="setReviewed('${s.id}', this.checked)" />
-            Geprüft
-          </label>
-          ${s.reviewedByGS ? `
+          ${allReviewed ? `
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;">
             <input type="checkbox" onchange="archiveEntry('${s.id}', this)" />
             Erledigt
@@ -374,7 +387,8 @@
         </div>
         ` : ''}
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
   function toggleEdit(id) {
     editingId = editingId === id ? null : id;
@@ -417,12 +431,14 @@
     const ok = await writeMeta(sub, updates);
     if (ok) { editingId = null; toast('💾 Änderungen gespeichert.'); await renderEntries(); }
   }
-  async function setReviewed(id, checked) {
+  async function setFileReviewed(id, idx, checked) {
     const queue = await loadEntries();
     const sub = queue.find(s => s.id === id);
     if (!sub) return;
-    const ok = await writeMeta(sub, { reviewedByGS: checked });
-    if (ok) { toast(checked ? '✅ Als geprüft markiert.' : '↩️ Prüf-Markierung entfernt.'); await renderEntries(); }
+    const files = (sub.files || []).map((f, i) => i === idx ? { ...f, reviewed: checked } : f);
+    const allReviewed = files.length > 0 && files.every(f => f.reviewed);
+    const ok = await writeMeta(sub, { files, reviewedByGS: allReviewed });
+    if (ok) { toast(checked ? '✅ Datei als geprüft markiert.' : '↩️ Prüf-Markierung entfernt.'); await renderEntries(); }
   }
   async function archiveEntry(id, checkboxEl) {
     if (checkboxEl && !checkboxEl.checked) return;
