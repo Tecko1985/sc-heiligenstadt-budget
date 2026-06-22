@@ -753,6 +753,11 @@
     <div class="lightbox-header">
       <h3 id="lightboxTitle">Beleg</h3>
       <div class="actions">
+        <span id="lightboxNav" style="display:none; align-items:center; gap:4px;">
+          <button class="btn btn-gray btn-sm" id="lightboxPrev" title="Vorheriger Beleg">‹</button>
+          <span id="lightboxNavLabel" style="font-size:0.8rem; color:var(--muted);"></span>
+          <button class="btn btn-gray btn-sm" id="lightboxNext" title="Nächster Beleg">›</button>
+        </span>
         <button class="btn btn-blue btn-sm" id="lightboxDownload">⬇ Herunterladen</button>
         <button class="lightbox-close" onclick="closeLightbox()">✕</button>
       </div>
@@ -1069,7 +1074,12 @@
       const entries = load(type);
       const entry = entries.find(x => x.id === id);
       if (!entry) return;
-      entry.attachment = att;
+      if (entry.attachment) {
+        entry.extraAttachments = entry.extraAttachments || [];
+        entry.extraAttachments.push(att);
+      } else {
+        entry.attachment = att;
+      }
       save(type, entries);
       render();
       toast('📎 Beleg angehängt');
@@ -1082,7 +1092,9 @@
     const entry = entries.find(x => x.id === id);
     if (!entry) return;
     if (entry.attachment && entry.attachment.external) deleteAttachmentFile(entry.attachment.storedAs);
+    (entry.extraAttachments || []).forEach(att => { if (att.external) deleteAttachmentFile(att.storedAs); });
     entry.attachment = null;
+    entry.extraAttachments = [];
     save(type, entries);
     render();
     toast('🗑 Beleg entfernt');
@@ -1090,11 +1102,24 @@
   async function viewAttachment(type, id) {
     const entry = load(type).find(x => x.id === id);
     if (!entry || !entry.attachment) return attachToExisting(type, id);
-    await openLightbox(entry.attachment);
+    const atts = [entry.attachment, ...(entry.extraAttachments || [])];
+    await openLightboxList(atts, 0);
   }
 
   // ── Lightbox ───────────────────────────────────────────────────────────────
   let currentLightboxObjectUrl = null;
+  async function openLightboxList(atts, idx) {
+    const nav = document.getElementById('lightboxNav');
+    if (atts.length > 1) {
+      nav.style.display = 'inline-flex';
+      document.getElementById('lightboxNavLabel').textContent = `${idx + 1}/${atts.length}`;
+      document.getElementById('lightboxPrev').onclick = () => openLightboxList(atts, (idx - 1 + atts.length) % atts.length);
+      document.getElementById('lightboxNext').onclick = () => openLightboxList(atts, (idx + 1) % atts.length);
+    } else {
+      nav.style.display = 'none';
+    }
+    await openLightbox(atts[idx]);
+  }
   async function openLightbox(att) {
     document.getElementById('lightboxTitle').textContent = att.name;
     const body = document.getElementById('lightboxBody');
@@ -1850,9 +1875,13 @@
         const file = await fh.getFile();
         const meta = JSON.parse(await file.text());
         const base = metaName.slice(0, -'.meta.json'.length);
-        const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
-        if (!fileName) continue;
-        queue.push({ id: metaName, fileName, ...meta, _dir: dirHandle });
+        let files = Array.isArray(meta.files) ? meta.files : null;
+        if (!files) {
+          const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
+          if (!fileName) continue;
+          files = [{ fileName, fileOrigName: meta.fileOrigName, fileMime: meta.fileMime }];
+        }
+        queue.push({ id: metaName, fileName: files[0].fileName, files, ...meta, _dir: dirHandle });
       } catch {}
     }
     return queue;
@@ -1889,7 +1918,7 @@
           <option value="income">Einnahme</option>
         </select>
         <select class="cat-edit-select" id="eingangCat_${s.id}"></select>
-        <button title="Beleg ansehen" onclick="viewEingangBeleg('${s.id}')">📎</button>
+        ${(s.files || []).map((f, i) => `<button title="${escapeHtml(f.fileOrigName || 'Beleg ansehen')}" onclick="viewEingangBeleg('${s.id}', ${i})">📎${s.files.length > 1 ? (i + 1) : ''}</button>`).join('')}
         <button title="Übernehmen" onclick="convertEingang('${s.id}')" style="color:var(--green)">✅</button>
         <button title="Verwerfen" onclick="dismissEingang('${s.id}')">✕</button>
       </div>
@@ -1906,21 +1935,23 @@
     catSel.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     catSel.value = cats.includes(prev) ? prev : defaultCategoryFor(type);
   }
-  async function viewEingangBeleg(id) {
+  async function viewEingangBeleg(id, idx) {
     const queue = await loadEingaenge();
     const sub = queue.find(s => s.id === id);
     if (!sub || !eingangFolderHandle) return;
+    const f = (sub.files || [])[idx || 0];
+    if (!f) return;
     try {
       const ok = await verifyPermission(eingangFolderHandle, 'read');
       if (!ok) return toast('❌ Leserechte verweigert.');
-      const fh = await (sub._dir || eingangFolderHandle).getFileHandle(sub.fileName);
+      const fh = await (sub._dir || eingangFolderHandle).getFileHandle(f.fileName);
       const file = await fh.getFile();
       const url = URL.createObjectURL(file);
       currentLightboxObjectUrl = url;
-      document.getElementById('lightboxTitle').textContent = sub.fileOrigName;
+      document.getElementById('lightboxTitle').textContent = f.fileOrigName;
       const body = document.getElementById('lightboxBody');
       body.innerHTML = '';
-      const mime = file.type || sub.fileMime;
+      const mime = file.type || f.fileMime;
       if (mime.startsWith('image/')) {
         const img = document.createElement('img'); img.src = url; body.appendChild(img);
       } else if (mime === 'application/pdf') {
@@ -1929,7 +1960,7 @@
         body.innerHTML = '<p style="color:var(--muted)">Vorschau nicht verfügbar.</p>';
       }
       document.getElementById('lightboxDownload').onclick = () => {
-        const a = document.createElement('a'); a.href = url; a.download = sub.fileOrigName; a.click();
+        const a = document.createElement('a'); a.href = url; a.download = f.fileOrigName; a.click();
       };
       document.getElementById('lightboxOverlay').classList.add('show');
     } catch (e) {
@@ -1943,7 +1974,9 @@
   async function removeEingangFiles(sub) {
     const dir = sub._dir || eingangFolderHandle;
     let ok = true;
-    try { await dir.removeEntry(sub.fileName); } catch (e) { ok = false; }
+    for (const f of (sub.files || [])) {
+      try { await dir.removeEntry(f.fileName); } catch (e) { ok = false; }
+    }
     try { await dir.removeEntry(sub.id); } catch (e) { ok = false; }
     return ok;
   }
@@ -1958,19 +1991,25 @@
     if (!confirm(`„${sub.desc}" von ${sub.name} als ${type === 'income' ? 'Einnahme' : 'Ausgabe'} (Kategorie: ${cat}) übernehmen?`)) return;
 
     let attachment = null;
+    const extraAttachments = [];
     try {
       const ok = await verifyPermission(eingangFolderHandle, 'read');
       if (ok) {
-        const fh = await (sub._dir || eingangFolderHandle).getFileHandle(sub.fileName);
-        const file = await fh.getFile();
-        if (linkedFolderHandle) {
-          attachment = await writeAttachmentFile(file);
-        } else {
-          attachment = await new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = ev => resolve({ name: sub.fileOrigName, mime: file.type || sub.fileMime, data: ev.target.result });
-            reader.readAsDataURL(file);
-          });
+        const dir = sub._dir || eingangFolderHandle;
+        for (const f of (sub.files || [])) {
+          const fh = await dir.getFileHandle(f.fileName);
+          const file = await fh.getFile();
+          let att;
+          if (linkedFolderHandle) {
+            att = await writeAttachmentFile(file);
+          } else {
+            att = await new Promise(resolve => {
+              const reader = new FileReader();
+              reader.onload = ev => resolve({ name: f.fileOrigName, mime: file.type || f.fileMime, data: ev.target.result });
+              reader.readAsDataURL(file);
+            });
+          }
+          if (!attachment) attachment = att; else extraAttachments.push(att);
         }
       }
     } catch (e) {
@@ -1985,6 +2024,7 @@
       cat,
       date: sub.date,
       attachment,
+      extraAttachments,
       enteredBy: sub.name
     });
     save(type, entries);
@@ -2210,12 +2250,14 @@
   }
   function entryItemHtml(e, type) {
     const hasFile = !!e.attachment;
-    const attIcon = hasFile ? (e.attachment.external ? '📁' : '📎') : '➕📎';
+    const extraCount = (e.extraAttachments || []).length;
+    const attIcon = hasFile ? (e.attachment.external ? '📁' : '📎') + (extraCount ? `+${extraCount}` : '') : '➕📎';
     return `<li class="entry-item">
       <span class="cat" title="Klicken zum Ändern der Kategorie" onclick="editEntryCategory(this,'${type}', ${e.id})">${escapeHtml(e.cat)}</span>
       <span class="desc">${escapeHtml(e.desc)}<br><small style="color:var(--muted)">${e.date} · von ${escapeHtml(e.enteredBy) || 'Unbekannt'}</small></span>
       <span class="val ${type === 'income' ? 'pos' : 'neg'}">${fmt(e.amount)}</span>
-      <button class="attach-btn ${hasFile ? 'has-file' : ''}" title="${hasFile ? 'Beleg ansehen: ' + escapeHtml(e.attachment.name) + (e.attachment.external ? ' (im Ordner)' : ' (eingebettet)') : 'Beleg anhängen'}" onclick="viewAttachment('${type}', ${e.id})">${attIcon}</button>
+      <button class="attach-btn ${hasFile ? 'has-file' : ''}" title="${hasFile ? 'Beleg ansehen: ' + escapeHtml(e.attachment.name) + (extraCount ? ` (+${extraCount} weitere)` : '') + (e.attachment.external ? ' (im Ordner)' : ' (eingebettet)') : 'Beleg anhängen'}" onclick="viewAttachment('${type}', ${e.id})">${attIcon}</button>
+      ${hasFile ? `<button class="icon-btn" title="Weitere Datei anhängen" onclick="attachToExisting('${type}', ${e.id})" style="font-size:0.8rem">➕📎</button>` : ''}
       ${hasFile ? `<button class="icon-btn" title="Beleg entfernen" onclick="removeAttachment('${type}', ${e.id})" style="font-size:0.8rem">🗑📎</button>` : ''}
       <button class="icon-btn" title="Eintrag löschen" onclick="deleteEntry('${type}', ${e.id})">✕</button>
     </li>`;

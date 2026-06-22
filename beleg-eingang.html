@@ -48,6 +48,13 @@
     cursor: pointer; border: 1px dashed var(--blue); border-radius: 8px; padding: 9px 14px;
   }
   .file-row .file-name { font-size: 0.82rem; color: var(--muted); flex: 1; word-break: break-all; }
+  .file-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .file-list-item {
+    display: flex; align-items: center; gap: 8px; background: var(--gray); border-radius: 8px; padding: 7px 10px; font-size: 0.82rem;
+  }
+  .file-list-item .fname { flex: 1; word-break: break-all; }
+  .file-list-item button { border: none; background: none; color: var(--muted); font-size: 0.95rem; cursor: pointer; line-height: 1; padding: 0 2px; }
+  .file-list-item button:hover { color: #c0392b; }
   .toast {
     position: fixed; bottom: 24px; right: 24px; left: 24px; background: var(--text); color: white; padding: 14px 18px;
     border-radius: 10px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
@@ -88,12 +95,13 @@
       <input type="text" id="subDesc" placeholder="z. B. Tanken Vereinsbus" />
     </div>
     <div class="field-group">
-      <label>Beleg-Foto / PDF</label>
+      <label>Beleg-Fotos / PDFs</label>
       <div class="file-row">
-        <label class="file-label" for="subFile">📎 Datei wählen</label>
-        <input type="file" id="subFile" accept="image/*,.pdf" style="display:none" onchange="handleFileSelect(event)" />
+        <label class="file-label" for="subFile">📎 Dateien wählen</label>
+        <input type="file" id="subFile" accept="image/*,.pdf" multiple style="display:none" onchange="handleFileSelect(event)" />
         <span class="file-name" id="subFileName">Keine Datei ausgewählt</span>
       </div>
+      <div class="file-list" id="subFileList"></div>
     </div>
     <div class="field-group">
       <label>Notiz (optional)</label>
@@ -118,13 +126,34 @@
   // direkter Browser-Uploads zum Storage Share). Siehe worker.js im Repo.
   const WORKER_URL = 'https://sc-heiligenstadt-beleg-upload.michel-brunner.workers.dev/';
 
-  let pendingFile = null;
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  let pendingFiles = [];
 
   function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    pendingFile = file;
-    document.getElementById('subFileName').textContent = file.name;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    pendingFiles.push(...files);
+    e.target.value = '';
+    renderFileList();
+  }
+
+  function removePendingFile(idx) {
+    pendingFiles.splice(idx, 1);
+    renderFileList();
+  }
+
+  function renderFileList() {
+    const listEl = document.getElementById('subFileList');
+    document.getElementById('subFileName').textContent = pendingFiles.length ? `${pendingFiles.length} Datei(en) ausgewählt` : 'Keine Datei ausgewählt';
+    listEl.innerHTML = pendingFiles.map((f, i) => `
+      <div class="file-list-item">
+        <span class="fname">📄 ${escapeHtml(f.name)}</span>
+        <button type="button" onclick="removePendingFile(${i})" title="Entfernen">✕</button>
+      </div>
+    `).join('');
   }
 
   async function submitReceipt() {
@@ -135,7 +164,7 @@
     const note = document.getElementById('subNote').value.trim();
     if (!name) return toast('Bitte deinen Namen eingeben.');
     if (!desc) return toast('Bitte eine Beschreibung eingeben.');
-    if (!pendingFile) return toast('Bitte einen Beleg (Foto/PDF) auswählen.');
+    if (!pendingFiles.length) return toast('Bitte mindestens einen Beleg (Foto/PDF) auswählen.');
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
@@ -147,7 +176,7 @@
       form.append('date', date);
       form.append('desc', desc);
       form.append('note', note);
-      form.append('file', pendingFile);
+      pendingFiles.forEach(f => form.append('files', f));
 
       const res = await fetch(WORKER_URL, { method: 'POST', body: form });
       const result = await res.json().catch(() => ({}));
@@ -167,10 +196,10 @@
     document.getElementById('subAmount').value = '';
     document.getElementById('subDesc').value = '';
     document.getElementById('subNote').value = '';
-    document.getElementById('subFileName').textContent = 'Keine Datei ausgewählt';
     document.getElementById('subDate').value = new Date().toISOString().slice(0,10);
-    pendingFile = null;
+    pendingFiles = [];
     document.getElementById('subFile').value = '';
+    renderFileList();
     document.getElementById('formCard').style.display = 'block';
     document.getElementById('successBox').style.display = 'none';
   }

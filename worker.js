@@ -53,27 +53,38 @@ export default {
       const date = (form.get('date') || '').toString().trim();
       const desc = (form.get('desc') || '').toString().trim();
       const note = (form.get('note') || '').toString().trim();
-      const file = form.get('file');
+      const files = form.getAll('files').filter(f => typeof f !== 'string');
 
-      if (!name || !desc || !file || typeof file === 'string') {
+      if (!name || !desc || !files.length) {
         throw new Error('Pflichtfelder fehlen (Name, Beschreibung, Datei)');
       }
 
       const stamp = Date.now();
-      const dotIdx = file.name.lastIndexOf('.');
-      const ext = dotIdx >= 0 ? file.name.slice(dotIdx) : '';
       const baseName = `${stamp}_${sanitize(date)}_${sanitize(desc)}_${sanitize(name)}`;
-      const receiptFileName = `${baseName}${ext}`;
+      const fileEntries = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const dotIdx = file.name.lastIndexOf('.');
+        const ext = dotIdx >= 0 ? file.name.slice(dotIdx) : '';
+        const receiptFileName = files.length > 1 ? `${baseName}_${i + 1}${ext}` : `${baseName}${ext}`;
+        await putToNextcloud(token, receiptFileName, await file.arrayBuffer(), file.type);
+        fileEntries.push({
+          fileName: receiptFileName,
+          fileOrigName: file.name,
+          fileMime: file.type || 'application/octet-stream',
+        });
+      }
       const metaFileName = `${baseName}.meta.json`;
 
       const meta = {
         name, amount: parseFloat(amount) || 0, date, desc, note,
-        fileOrigName: file.name,
-        fileMime: file.type || 'application/octet-stream',
+        files: fileEntries,
+        // Erstes File zusaetzlich auf Top-Level fuer Abwaertskompatibilitaet mit aelteren Lesern.
+        fileOrigName: fileEntries[0].fileOrigName,
+        fileMime: fileEntries[0].fileMime,
         submittedAt: new Date(stamp).toISOString(),
       };
 
-      await putToNextcloud(token, receiptFileName, await file.arrayBuffer(), file.type);
       await putToNextcloud(token, metaFileName, JSON.stringify(meta, null, 2), 'application/json');
 
       return new Response(JSON.stringify({ ok: true }), {

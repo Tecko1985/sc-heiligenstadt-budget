@@ -58,6 +58,10 @@
   .edit-form label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
   .edit-form input, .edit-form textarea { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.88rem; font-family: inherit; width: 100%; }
   .empty { color: var(--muted); font-size: 0.88rem; padding: 20px; text-align: center; }
+  .filter-bar { display: grid; gap: 10px; margin-bottom: 16px; padding: 14px; background: var(--gray); border-radius: 10px; border: 1px solid var(--border); }
+  .filter-bar .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .filter-bar .field-group label { font-size: 0.75rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 3px; }
+  .filter-bar input, .filter-bar select { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.88rem; font-family: inherit; width: 100%; }
   .toast {
     position: fixed; bottom: 24px; right: 24px; left: 24px; background: var(--text); color: white; padding: 14px 18px;
     border-radius: 10px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
@@ -109,6 +113,30 @@
   <div class="card">
     <h2 style="cursor:pointer;" onclick="toggleArchive()">📦 Erledigte Belege <span id="archiveToggleArrow">▸</span></h2>
     <p class="hint">Bereits abgelegte Belege — zur Nachverfolgung, nicht mehr in der aktiven Liste.</p>
+    <div id="archiveFilterBar" class="filter-bar" style="display:none">
+      <div class="field-group">
+        <label>🔎 Suche (Beschreibung, Name, Notiz)</label>
+        <input type="text" id="archiveFilterText" oninput="renderArchive()" placeholder="z. B. Tanken" />
+      </div>
+      <div class="row2">
+        <div class="field-group">
+          <label>Von</label>
+          <input type="date" id="archiveFilterFrom" onchange="renderArchive()" />
+        </div>
+        <div class="field-group">
+          <label>Bis</label>
+          <input type="date" id="archiveFilterTo" onchange="renderArchive()" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Sortierung</label>
+        <select id="archiveSortOrder" onchange="renderArchive()">
+          <option value="desc">Neueste zuerst</option>
+          <option value="asc">Älteste zuerst</option>
+        </select>
+      </div>
+      <button class="btn btn-gray btn-sm" onclick="resetArchiveFilters()">✕ Filter zurücksetzen</button>
+    </div>
     <div id="archiveList" style="display:none"><div class="empty">Noch nicht geladen.</div></div>
   </div>
 </main>
@@ -271,9 +299,13 @@
           const file = await fh.getFile();
           const meta = JSON.parse(await file.text());
           const base = metaName.slice(0, -'.meta.json'.length);
-          const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
-          if (!fileName) continue;
-          queue.push({ id: metaName, fileName, ...meta });
+          let files = Array.isArray(meta.files) ? meta.files : null;
+          if (!files) {
+            const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
+            if (!fileName) continue;
+            files = [{ fileName, fileOrigName: meta.fileOrigName, fileMime: meta.fileMime }];
+          }
+          queue.push({ id: metaName, fileName: files[0].fileName, files, ...meta });
         } catch {}
       }
       queue.sort((a, b) => (a.submittedAt || '').localeCompare(b.submittedAt || ''));
@@ -309,7 +341,7 @@
           <div class="entry-amount">${s.amount ? Number(s.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 }) + ' €' : ''}</div>
         </div>
         <div class="entry-actions">
-          <button class="btn btn-gray btn-sm" onclick="viewAttachment('${s.id}')">📎 Beleg ansehen</button>
+          ${(s.files || []).map((f, i) => `<button class="btn btn-gray btn-sm" onclick="viewAttachment('${s.id}', ${i})">📎 ${escapeHtml(f.fileOrigName || `Beleg ${i + 1}`)}</button>`).join('')}
           <button class="btn btn-blue btn-sm" onclick="toggleEdit('${s.id}')">✏️ Bearbeiten</button>
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;">
             <input type="checkbox" ${s.reviewedByGS ? 'checked' : ''} onchange="setReviewed('${s.id}', this.checked)" />
@@ -353,7 +385,7 @@
     if (!ok) { toast('❌ Schreibrechte verweigert.'); return false; }
     const meta = {
       name: sub.name, amount: sub.amount, date: sub.date, desc: sub.desc, note: sub.note,
-      fileOrigName: sub.fileOrigName, fileMime: sub.fileMime, submittedAt: sub.submittedAt,
+      files: sub.files, fileOrigName: sub.fileOrigName, fileMime: sub.fileMime, submittedAt: sub.submittedAt,
       reviewedByGS: sub.reviewedByGS || false, gsNote: sub.gsNote || '',
       ...updates,
     };
@@ -405,7 +437,8 @@
     if (!ok) { toast('❌ Schreibrechte verweigert.'); if (checkboxEl) checkboxEl.checked = false; return; }
     try {
       const erledigtDir = await getErledigtDir(true);
-      for (const fileName of [sub.fileName, sub.id]) {
+      const fileNames = (sub.files || []).map(f => f.fileName);
+      for (const fileName of [...fileNames, sub.id]) {
         await moveFile(folderHandle, erledigtDir, fileName);
       }
       toast('📦 Als erledigt abgelegt.');
@@ -429,15 +462,34 @@
   async function toggleArchive() {
     archiveOpen = !archiveOpen;
     document.getElementById('archiveList').style.display = archiveOpen ? 'block' : 'none';
+    document.getElementById('archiveFilterBar').style.display = archiveOpen ? 'grid' : 'none';
     document.getElementById('archiveToggleArrow').textContent = archiveOpen ? '▾' : '▸';
     if (archiveOpen) await renderArchive();
+  }
+  function resetArchiveFilters() {
+    document.getElementById('archiveFilterText').value = '';
+    document.getElementById('archiveFilterFrom').value = '';
+    document.getElementById('archiveFilterTo').value = '';
+    document.getElementById('archiveSortOrder').value = 'desc';
+    renderArchive();
   }
   async function renderArchive() {
     const list = document.getElementById('archiveList');
     if (!folderHandle) { list.innerHTML = '<div class="empty">Kein Eingangs-Ordner verknüpft.</div>'; return; }
-    const queue = await loadArchivedEntries();
-    if (!queue.length) { list.innerHTML = '<div class="empty">Noch keine erledigten Belege.</div>'; return; }
-    list.innerHTML = queue.slice().reverse().map(s => `
+    let queue = await loadArchivedEntries();
+    const text = (document.getElementById('archiveFilterText')?.value || '').trim().toLowerCase();
+    const from = document.getElementById('archiveFilterFrom')?.value || '';
+    const to = document.getElementById('archiveFilterTo')?.value || '';
+    const order = document.getElementById('archiveSortOrder')?.value || 'desc';
+    if (text) {
+      queue = queue.filter(s => [s.desc, s.name, s.note, s.gsNote].some(v => (v || '').toLowerCase().includes(text)));
+    }
+    if (from) queue = queue.filter(s => (s.date || '') >= from);
+    if (to) queue = queue.filter(s => (s.date || '') <= to);
+    queue = queue.slice();
+    if (order === 'desc') queue.reverse();
+    if (!queue.length) { list.innerHTML = '<div class="empty">Keine erledigten Belege für diesen Filter.</div>'; return; }
+    list.innerHTML = queue.map(s => `
       <div class="entry reviewed">
         <div class="entry-top">
           <div>
@@ -448,7 +500,7 @@
           <div class="entry-amount">${s.amount ? Number(s.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 }) + ' €' : ''}</div>
         </div>
         <div class="entry-actions">
-          <button class="btn btn-gray btn-sm" onclick="viewArchivedAttachment('${s.id}')">📎 Beleg ansehen</button>
+          ${(s.files || []).map((f, i) => `<button class="btn btn-gray btn-sm" onclick="viewArchivedAttachment('${s.id}', ${i})">📎 ${escapeHtml(f.fileOrigName || `Beleg ${i + 1}`)}</button>`).join('')}
           <button class="btn btn-blue btn-sm" onclick="restoreEntry('${s.id}')">↩️ Zurückholen</button>
         </div>
       </div>
@@ -463,7 +515,8 @@
     const ok = await verifyPermission(folderHandle, 'readwrite');
     if (!ok) return toast('❌ Schreibrechte verweigert.');
     try {
-      for (const fileName of [sub.fileName, sub.id]) {
+      const fileNames = (sub.files || []).map(f => f.fileName);
+      for (const fileName of [...fileNames, sub.id]) {
         await moveFile(erledigtDir, folderHandle, fileName);
       }
       toast('↩️ Zurückgeholt.');
@@ -473,22 +526,24 @@
       toast('❌ Zurückholen fehlgeschlagen: ' + e.message);
     }
   }
-  async function viewArchivedAttachment(id) {
+  async function viewArchivedAttachment(id, idx) {
     const erledigtDir = await getErledigtDir(false);
     const queue = await loadEntriesFrom(erledigtDir);
     const sub = queue.find(s => s.id === id);
     if (!sub || !erledigtDir) return;
+    const f = (sub.files || [])[idx || 0];
+    if (!f) return;
     try {
       const ok = await verifyPermission(erledigtDir, 'read');
       if (!ok) return toast('❌ Leserechte verweigert.');
-      const fh = await erledigtDir.getFileHandle(sub.fileName);
+      const fh = await erledigtDir.getFileHandle(f.fileName);
       const file = await fh.getFile();
       const url = URL.createObjectURL(file);
       currentLightboxObjectUrl = url;
-      document.getElementById('lightboxTitle').textContent = sub.fileOrigName || sub.fileName;
+      document.getElementById('lightboxTitle').textContent = f.fileOrigName || f.fileName;
       const body = document.getElementById('lightboxBody');
       body.innerHTML = '';
-      const mime = file.type || sub.fileMime || '';
+      const mime = file.type || f.fileMime || '';
       if (mime.startsWith('image/')) {
         const img = document.createElement('img'); img.src = url; body.appendChild(img);
       } else if (mime === 'application/pdf') {
@@ -508,27 +563,31 @@
     if (!confirm(`„${sub.desc}" von ${sub.name} unwiderruflich löschen? Dies entfernt Beleg und Daten vollständig aus dem Ordner.`)) return;
     const ok = await verifyPermission(folderHandle, 'readwrite');
     if (!ok) return toast('❌ Schreibrechte verweigert.');
-    try { await folderHandle.removeEntry(sub.fileName); } catch {}
+    for (const f of (sub.files || [])) {
+      try { await folderHandle.removeEntry(f.fileName); } catch {}
+    }
     try { await folderHandle.removeEntry(sub.id); } catch {}
     toast('🗑 Eintrag gelöscht.');
     await renderEntries();
   }
   let currentLightboxObjectUrl = null;
-  async function viewAttachment(id) {
+  async function viewAttachment(id, idx) {
     const queue = await loadEntries();
     const sub = queue.find(s => s.id === id);
     if (!sub || !folderHandle) return;
+    const f = (sub.files || [])[idx || 0];
+    if (!f) return;
     try {
       const ok = await verifyPermission(folderHandle, 'read');
       if (!ok) return toast('❌ Leserechte verweigert.');
-      const fh = await folderHandle.getFileHandle(sub.fileName);
+      const fh = await folderHandle.getFileHandle(f.fileName);
       const file = await fh.getFile();
       const url = URL.createObjectURL(file);
       currentLightboxObjectUrl = url;
-      document.getElementById('lightboxTitle').textContent = sub.fileOrigName || sub.fileName;
+      document.getElementById('lightboxTitle').textContent = f.fileOrigName || f.fileName;
       const body = document.getElementById('lightboxBody');
       body.innerHTML = '';
-      const mime = file.type || sub.fileMime || '';
+      const mime = file.type || f.fileMime || '';
       if (mime.startsWith('image/')) {
         const img = document.createElement('img'); img.src = url; body.appendChild(img);
       } else if (mime === 'application/pdf') {
