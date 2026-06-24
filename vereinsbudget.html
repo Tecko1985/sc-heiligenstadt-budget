@@ -771,7 +771,11 @@
 <script>
   // ── State ──────────────────────────────────────────────────────────────────
   const SEASONS = ['2026/27','2025/26','2024/25','2023/24','2022/23'];
-  let currentSeason = SEASONS[0];
+  const SEASON_KEY = 'vereinsbudget_lastSeason';
+  let currentSeason = (() => {
+    const s = localStorage.getItem(SEASON_KEY);
+    return s && SEASONS.includes(s) ? s : SEASONS[0];
+  })();
   let hasUnsavedChanges = false;
   let lastSavedAt = null;
   let lastLoadedFile = null;
@@ -938,7 +942,7 @@
       sel.appendChild(o);
     });
     sel.value = currentSeason;
-    sel.addEventListener('change', () => { currentSeason = sel.value; render(); });
+    sel.addEventListener('change', () => { currentSeason = sel.value; localStorage.setItem(SEASON_KEY, currentSeason); render(); });
   }
 
   // ── Beleg-Auswahl (vor dem Hinzufügen) ─────────────────────────────────────
@@ -999,7 +1003,7 @@
     const entries = load(type);
     entries.push({
       id: Date.now(),
-      desc, amount, cat,
+      desc, amount: Math.round(amount * 100) / 100, cat,
       date: new Date().toISOString().slice(0,10),
       attachment: pendingAttach[type] || null,
       enteredBy: getUserName()
@@ -1135,6 +1139,7 @@
       }
       try {
         const file = await readAttachmentFile(att.storedAs);
+        if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
         url = URL.createObjectURL(file);
         currentLightboxObjectUrl = url;
         mime = file.type || att.mime;
@@ -1167,6 +1172,7 @@
   }
   function closeLightbox() {
     document.getElementById('lightboxOverlay').classList.remove('show');
+    document.getElementById('lightboxNav').style.display = 'none';
     if (currentLightboxObjectUrl) { URL.revokeObjectURL(currentLightboxObjectUrl); currentLightboxObjectUrl = null; }
   }
 
@@ -1488,6 +1494,7 @@
     if (!data.income || !data.expense) throw new Error('Ungültiges Format');
     if (data.season && SEASONS.includes(data.season)) {
       currentSeason = data.season;
+      localStorage.setItem(SEASON_KEY, currentSeason);
       document.getElementById('seasonSelect').value = data.season;
     }
     localStorage.setItem(storageKey('income'),  JSON.stringify(data.income));
@@ -1550,7 +1557,13 @@
     const rows = [['Typ','Kategorie','Beschreibung','Betrag (€)','Datum','Beleg','Erfasst von']];
     incomes.forEach(e  => rows.push(['Einnahme', e.cat, e.desc, e.amount.toFixed(2), e.date, e.attachment ? e.attachment.name : '', e.enteredBy || '']));
     expenses.forEach(e => rows.push(['Ausgabe',  e.cat, e.desc, e.amount.toFixed(2), e.date, e.attachment ? e.attachment.name : '', e.enteredBy || '']));
-    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
+    const csvCell = (c) => {
+      let s = String(c);
+      // CSV-Injection vermeiden: führende Formel-Zeichen mit ' entschärfen
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const csv = rows.map(r => r.map(csvCell).join(';')).join('\n');
     download(`vereinsbudget_${currentSeason.replace('/','')}.csv`, 'text/csv', '﻿' + csv);
     toast('📊 CSV exportiert — öffne sie direkt in Excel');
   }
@@ -1946,8 +1959,10 @@
       if (!ok) return toast('❌ Leserechte verweigert.');
       const fh = await (sub._dir || eingangFolderHandle).getFileHandle(f.fileName);
       const file = await fh.getFile();
+      if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
       const url = URL.createObjectURL(file);
       currentLightboxObjectUrl = url;
+      document.getElementById('lightboxNav').style.display = 'none';
       document.getElementById('lightboxTitle').textContent = f.fileOrigName;
       const body = document.getElementById('lightboxBody');
       body.innerHTML = '';
@@ -2020,7 +2035,7 @@
     entries.push({
       id: Date.now(),
       desc: sub.desc,
-      amount: sub.amount || 0,
+      amount: Math.round((sub.amount || 0) * 100) / 100,
       cat,
       date: sub.date,
       attachment,
@@ -2134,12 +2149,12 @@
     const backups = getBackups();
     backups.unshift({ date: now.toISOString(), data });
     while (backups.length > MAX_BACKUPS) backups.pop();
-    try {
-      setBackups(backups);
-    } catch {
-      backups.pop();
-      try { setBackups(backups); } catch {}
+    let saved = false;
+    while (backups.length && !saved) {
+      try { setBackups(backups); saved = true; }
+      catch { backups.pop(); } // ältestes Backup entfernen und erneut versuchen
     }
+    if (!saved) toast('⚠️ Backup konnte nicht gespeichert werden — Browser-Speicher voll. Bitte alte Belege entfernen oder einen Backup-Ordner verknüpfen.');
     renderBackupList();
     await writeBackupToFolder(now, data);
     if (manual) toast('🗄️ Backup erstellt' + (backupFolderHandle && !backupFolderNeedsReconnect ? ' (lokal + Ordner).' : '.'));

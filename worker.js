@@ -8,6 +8,14 @@
 const ALLOWED_ORIGIN = 'https://tecko1985.github.io';
 const NEXTCLOUD_BASE = 'https://nx88695.your-storageshare.de/public.php/dav/files';
 
+// Missbrauchsschutz: CORS schuetzt nur Browser, nicht den Endpunkt selbst.
+// Diese Limits begrenzen, was ueber den offenen POST-Endpunkt hochladbar ist.
+const MAX_FILES = 10;
+const MAX_FILE_BYTES = 10 * 1024 * 1024;   // 10 MB pro Datei
+const MAX_TOTAL_BYTES = 25 * 1024 * 1024;  // 25 MB pro Einreichung
+const ALLOWED_MIME = /^(image\/|application\/pdf$)/;
+const ALLOWED_EXT = /\.(jpe?g|png|gif|webp|heic|heif|pdf)$/i;
+
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
@@ -18,6 +26,13 @@ function corsHeaders() {
 
 function sanitize(name) {
   return (name || '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60);
+}
+
+function badRequest(msg) {
+  return new Response(JSON.stringify({ ok: false, error: msg }), {
+    status: 400,
+    headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+  });
 }
 
 async function putToNextcloud(token, filename, body, contentType) {
@@ -57,6 +72,21 @@ export default {
 
       if (!name || !desc || !files.length) {
         throw new Error('Pflichtfelder fehlen (Name, Beschreibung, Datei)');
+      }
+
+      // Eingaben validieren, bevor irgendetwas hochgeladen wird.
+      if (files.length > MAX_FILES) {
+        return badRequest(`Zu viele Dateien (max. ${MAX_FILES}).`);
+      }
+      let totalBytes = 0;
+      for (const file of files) {
+        const typeOk = ALLOWED_MIME.test(file.type || '') || ALLOWED_EXT.test(file.name || '');
+        if (!typeOk) return badRequest('Nur Bilder oder PDF-Dateien sind erlaubt.');
+        if (file.size > MAX_FILE_BYTES) return badRequest('Eine Datei ist zu groß (max. 10 MB).');
+        totalBytes += file.size;
+      }
+      if (totalBytes > MAX_TOTAL_BYTES) {
+        return badRequest('Gesamtgröße der Dateien zu groß (max. 25 MB).');
       }
 
       const stamp = Date.now();
