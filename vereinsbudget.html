@@ -1606,7 +1606,7 @@
         <td>${escapeHtml(e.cat)}</td>
         <td>${escapeHtml(e.desc)}</td>
         <td class="print-amount">${fmt(e.amount)}</td>
-        <td>${e.attachment ? `<span class="print-receipt-ref">📎 ${escapeHtml(e.attachment.name)}</span>` : '–'}</td>
+        <td>${e.attachment ? `<span class="print-receipt-ref">📎 ${escapeHtml(e.attachment.name)}${(e.extraAttachments || []).length ? ` (+${e.extraAttachments.length})` : ''}</span>` : '–'}</td>
         <td>${escapeHtml(e.enteredBy) || '–'}</td>
       </tr>`).join('');
     }
@@ -1614,25 +1614,29 @@
       let html = '';
       for (const e of entries) {
         if (!e.attachment) continue;
-        const att = e.attachment;
-        let bodyHtml;
-        if (att.mime && att.mime.startsWith('image/')) {
-          const src = await getAttachmentSrc(att, objectUrls);
-          bodyHtml = src
-            ? `<img class="print-receipt-img" src="${src}" />`
-            : `<div class="print-receipt-missing-block">⚠️ Bild konnte nicht geladen werden (${unavailableReason(att)})</div>`;
-        } else if (att.mime === 'application/pdf') {
-          const src = await getAttachmentSrc(att, objectUrls);
-          bodyHtml = src
-            ? `<embed class="print-receipt-pdf" src="${src}" type="application/pdf" />`
-            : `<div class="print-receipt-missing-block">⚠️ PDF konnte nicht geladen werden (${unavailableReason(att)})</div>`;
-        } else {
-          bodyHtml = `<div class="print-receipt-missing-block">Dieser Dateityp kann nicht angezeigt werden: ${escapeHtml(att.name)}</div>`;
+        const atts = [e.attachment, ...(e.extraAttachments || [])];
+        for (let ai = 0; ai < atts.length; ai++) {
+          const att = atts[ai];
+          let bodyHtml;
+          if (att.mime && att.mime.startsWith('image/')) {
+            const src = await getAttachmentSrc(att, objectUrls);
+            bodyHtml = src
+              ? `<img class="print-receipt-img" src="${src}" />`
+              : `<div class="print-receipt-missing-block">⚠️ Bild konnte nicht geladen werden (${unavailableReason(att)})</div>`;
+          } else if (att.mime === 'application/pdf') {
+            const src = await getAttachmentSrc(att, objectUrls);
+            bodyHtml = src
+              ? `<embed class="print-receipt-pdf" src="${src}" type="application/pdf" />`
+              : `<div class="print-receipt-missing-block">⚠️ PDF konnte nicht geladen werden (${unavailableReason(att)})</div>`;
+          } else {
+            bodyHtml = `<div class="print-receipt-missing-block">Dieser Dateityp kann nicht angezeigt werden: ${escapeHtml(att.name)}</div>`;
+          }
+          const counter = atts.length > 1 ? ` (Beleg ${ai + 1}/${atts.length})` : '';
+          html += `<div class="print-receipt-page">
+            <div class="print-receipt-header">📎 Beleg zu „${escapeHtml(e.desc)}"${counter} — ${fmt(e.amount)} — ${e.date} (${typeLabel})</div>
+            ${bodyHtml}
+          </div>`;
         }
-        html += `<div class="print-receipt-page">
-          <div class="print-receipt-header">📎 Beleg zu „${escapeHtml(e.desc)}" — ${fmt(e.amount)} — ${e.date} (${typeLabel})</div>
-          ${bodyHtml}
-        </div>`;
       }
       return html;
     }

@@ -554,6 +554,7 @@
       if (!ok) return toast('❌ Leserechte verweigert.');
       const fh = await erledigtDir.getFileHandle(f.fileName);
       const file = await fh.getFile();
+      if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
       const url = URL.createObjectURL(file);
       currentLightboxObjectUrl = url;
       document.getElementById('lightboxTitle').textContent = f.fileOrigName || f.fileName;
@@ -598,6 +599,7 @@
       if (!ok) return toast('❌ Leserechte verweigert.');
       const fh = await folderHandle.getFileHandle(f.fileName);
       const file = await fh.getFile();
+      if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
       const url = URL.createObjectURL(file);
       currentLightboxObjectUrl = url;
       document.getElementById('lightboxTitle').textContent = f.fileOrigName || f.fileName;
