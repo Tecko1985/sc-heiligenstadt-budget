@@ -4,6 +4,9 @@
 // Deploy: Cloudflare Dashboard -> Workers & Pages -> Create Worker -> diesen
 // Code einfuegen -> Settings -> Variables -> Secret "NEXTCLOUD_SHARE_TOKEN"
 // anlegen (Wert: der Token aus dem Freigabelink, z.B. "kr8K5LHTHoM2wXS").
+// Zusaetzlich Secret "ACCESS_CODE" anlegen (ein kurzer, an die Helfer
+// weitergegebener Code, z.B. "sc1911"). Schuetzt den offenen POST-Endpunkt
+// davor, dass Unbeteiligte (die nur die URL kennen) Dateien hochladen koennen.
 
 const ALLOWED_ORIGIN = 'https://tecko1985.github.io';
 const NEXTCLOUD_BASE = 'https://nx88695.your-storageshare.de/public.php/dav/files';
@@ -63,12 +66,20 @@ export default {
       if (!token) throw new Error('Server nicht konfiguriert (Token fehlt)');
 
       const form = await request.formData();
+      const code = (form.get('code') || '').toString().trim();
       const name = (form.get('name') || '').toString().trim();
       const amount = (form.get('amount') || '').toString().trim();
       const date = (form.get('date') || '').toString().trim();
       const desc = (form.get('desc') || '').toString().trim();
       const note = (form.get('note') || '').toString().trim();
       const files = form.getAll('files').filter(f => typeof f !== 'string');
+
+      if (env.ACCESS_CODE && code !== env.ACCESS_CODE) {
+        return new Response(JSON.stringify({ ok: false, error: 'Falscher Zugriffscode.' }), {
+          status: 401,
+          headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+        });
+      }
 
       if (!name || !desc || !files.length) {
         throw new Error('Pflichtfelder fehlen (Name, Beschreibung, Datei)');

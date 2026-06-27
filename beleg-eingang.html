@@ -77,6 +77,10 @@
   <div class="card" id="formCard">
     <h2>📝 Beleg-Angaben</h2>
     <div class="field-group">
+      <label>Zugriffscode</label>
+      <input type="text" id="subCode" placeholder="vom Verein erhalten" autocomplete="off" />
+    </div>
+    <div class="field-group">
       <label>Dein Name</label>
       <input type="text" id="subName" placeholder="z. B. Michel" />
     </div>
@@ -157,11 +161,13 @@
   }
 
   async function submitReceipt() {
+    const code = document.getElementById('subCode').value.trim();
     const name = document.getElementById('subName').value.trim();
     const amount = document.getElementById('subAmount').value;
     const date = document.getElementById('subDate').value || new Date().toISOString().slice(0,10);
     const desc = document.getElementById('subDesc').value.trim();
     const note = document.getElementById('subNote').value.trim();
+    if (!code) return toast('Bitte den Zugriffscode eingeben.');
     if (!name) return toast('Bitte deinen Namen eingeben.');
     if (!desc) return toast('Bitte eine Beschreibung eingeben.');
     if (!pendingFiles.length) return toast('Bitte mindestens einen Beleg (Foto/PDF) auswählen.');
@@ -171,6 +177,7 @@
     btn.textContent = '⏳ Wird gesendet…';
     try {
       const form = new FormData();
+      form.append('code', code);
       form.append('name', name);
       form.append('amount', amount);
       form.append('date', date);
@@ -214,6 +221,8 @@
   document.getElementById('subDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('subName').value = localStorage.getItem('eingang_username') || '';
   document.getElementById('subName').addEventListener('input', e => localStorage.setItem('eingang_username', e.target.value.trim()));
+  document.getElementById('subCode').value = localStorage.getItem('eingang_code') || '';
+  document.getElementById('subCode').addEventListener('input', e => localStorage.setItem('eingang_code', e.target.value.trim()));
 </script>
 </body>
 </html>
