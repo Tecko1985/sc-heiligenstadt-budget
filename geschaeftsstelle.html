@@ -445,7 +445,7 @@
     const queue = await loadEntries();
     const sub = queue.find(s => s.id === id);
     if (!sub) { if (checkboxEl) checkboxEl.checked = false; return; }
-    if (!confirm(`„${sub.desc}" von ${sub.name} als erledigt ablegen? Der Eintrag verschwindet dann aus dieser Liste und aus dem Vereinsbudget (Beleg + Daten bleiben im Unterordner „Erledigt" erhalten).`)) {
+    if (!confirm(`„${sub.desc}" von ${sub.name} als erledigt ablegen? Der Eintrag verschwindet dann aus dieser Liste; im Vereinsbudget bleibt er zur Übernahme verfügbar (Beleg + Daten werden in den Unterordner „Erledigt" verschoben).`)) {
       if (checkboxEl) checkboxEl.checked = false;
       return;
     }
