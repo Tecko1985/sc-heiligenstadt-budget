@@ -626,7 +626,7 @@
         <span class="loc-icon">📌</span>
         <div class="loc-text">
           <div class="loc-title" id="locTitle">Kein fester Speicherort festgelegt</div>
-          <div class="loc-sub" id="locSub">Lege einmal eine Datei fest (z. B. auf deinem gemappten Storage-Share-Laufwerk) — danach speichert/lädt der Button direkt dorthin, ohne Dialog.</div>
+          <div class="loc-sub" id="locSub">Lege einmal eine Datei fest (z. B. auf deinem gemappten Storage-Share-Laufwerk) — danach speichert/lädt der Button direkt dorthin, ohne Dialog.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\05_Nachwuchsbereich\02_Förderung\Tools\sc-heiligenstadt-budget\vereinsbudget_daten.json</code></div>
         </div>
         <div class="loc-actions">
           <button class="btn btn-orange btn-sm" id="locReconnectBtn" style="display:none" onclick="reconnectFileLocation()">🔌 Verbinden &amp; laden</button>
@@ -641,7 +641,7 @@
         <span class="loc-icon">📁</span>
         <div class="loc-text">
           <div class="loc-title" id="folderTitle">Kein Belege-Ordner festgelegt</div>
-          <div class="loc-sub" id="folderSub">Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — neue Belege werden dann als einzelne Dateien dort gespeichert, statt im begrenzten Browser-Speicher. Empfehlenswert, wenn viele Belege zusammenkommen.</div>
+          <div class="loc-sub" id="folderSub">Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — neue Belege werden dann als einzelne Dateien dort gespeichert, statt im begrenzten Browser-Speicher. Empfehlenswert, wenn viele Belege zusammenkommen.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\05_Nachwuchsbereich\02_Förderung\Tools\sc-heiligenstadt-budget\Belege</code></div>
         </div>
         <div class="loc-actions">
           <button class="btn btn-blue btn-sm" onclick="pickBelegeFolder()">📁 Ordner festlegen</button>
@@ -652,7 +652,7 @@
         <span class="loc-icon">📥</span>
         <div class="loc-text">
           <div class="loc-title" id="eingangFolderTitle">Kein Eingangs-Ordner festgelegt</div>
-          <div class="loc-sub" id="eingangFolderSub">Verknüpfe denselben Ordner, den Helfer im separaten Beleg-Einreichungsformular (<code>beleg-eingang.html</code>) ausgewählt haben — z. B. für Tankbelege.</div>
+          <div class="loc-sub" id="eingangFolderSub">Verknüpfe denselben Ordner, den Helfer im separaten Beleg-Einreichungsformular (<code>beleg-eingang.html</code>) ausgewählt haben — z. B. für Tankbelege.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\02_Geschäftsstelle\Belege_aus_Belegtool</code></div>
         </div>
         <div class="loc-actions">
           <button class="btn btn-orange btn-sm" id="eingangFolderReconnectBtn" style="display:none" onclick="reconnectEingangFolder()">🔌 Verbinden</button>
@@ -664,7 +664,7 @@
         <span class="loc-icon">🗄️</span>
         <div class="loc-text">
           <div class="loc-title" id="backupFolderTitle">Kein Backup-Ordner festgelegt</div>
-          <div class="loc-sub" id="backupFolderSub">Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — bei jedem Start wird dort zusätzlich eine datierte Backup-Datei abgelegt.</div>
+          <div class="loc-sub" id="backupFolderSub">Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — bei jedem Start wird dort zusätzlich eine datierte Backup-Datei abgelegt.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\05_Nachwuchsbereich\02_Förderung\Tools\sc-heiligenstadt-budget\Backup</code></div>
         </div>
         <div class="loc-actions">
           <button class="btn btn-orange btn-sm" id="backupFolderReconnectBtn" style="display:none" onclick="reconnectBackupFolder()">🔌 Verbinden</button>
@@ -1334,7 +1334,7 @@
     } else {
       bar.classList.remove('linked');
       title.textContent = 'Kein Belege-Ordner festgelegt';
-      sub.textContent = 'Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — neue Belege werden dann als einzelne Dateien dort gespeichert, statt im begrenzten Browser-Speicher. Empfehlenswert, wenn viele Belege zusammenkommen.';
+      sub.innerHTML = 'Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — neue Belege werden dann als einzelne Dateien dort gespeichert, statt im begrenzten Browser-Speicher. Empfehlenswert, wenn viele Belege zusammenkommen.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\05_Nachwuchsbereich\\02_Förderung\\Tools\\sc-heiligenstadt-budget\\Belege</code>';
       clearBtn.style.display = 'none';
     }
     updateMissingLinksBar();
@@ -1430,7 +1430,7 @@
     } else {
       bar.classList.remove('linked');
       title.textContent = 'Kein fester Speicherort festgelegt';
-      sub.textContent = 'Lege einmal eine Datei fest (z. B. auf deinem gemappten Storage-Share-Laufwerk) — danach speichert/lädt der Button direkt dorthin, ohne Dialog.';
+      sub.innerHTML = 'Lege einmal eine Datei fest (z. B. auf deinem gemappten Storage-Share-Laufwerk) — danach speichert/lädt der Button direkt dorthin, ohne Dialog.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\05_Nachwuchsbereich\\02_Förderung\\Tools\\sc-heiligenstadt-budget\\vereinsbudget_daten.json</code>';
       clearBtn.style.display = 'none';
       document.getElementById('saveActionTitle').textContent = 'In Cloud speichern';
       document.getElementById('saveActionDesc').innerHTML = 'Erzeugt eine <code>daten.json</code> mit allen Daten <strong>und Belegen</strong> zum Herunterladen.';
@@ -1784,7 +1784,7 @@
     } else {
       bar.classList.remove('linked');
       title.textContent = 'Kein Eingangs-Ordner festgelegt';
-      sub.textContent = 'Verknüpfe denselben Ordner, den Helfer im Beleg-Einreichungsformular ausgewählt haben.';
+      sub.innerHTML = 'Verknüpfe denselben Ordner, den Helfer im Beleg-Einreichungsformular ausgewählt haben.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\02_Geschäftsstelle\\Belege_aus_Belegtool</code>';
       clearBtn.style.display = 'none';
     }
     updateMissingLinksBar();
@@ -1848,7 +1848,7 @@
     } else {
       bar.classList.remove('linked');
       title.textContent = 'Kein Backup-Ordner festgelegt';
-      sub.textContent = 'Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — bei jedem Start wird dort zusätzlich eine datierte Backup-Datei abgelegt.';
+      sub.innerHTML = 'Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — bei jedem Start wird dort zusätzlich eine datierte Backup-Datei abgelegt.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\05_Nachwuchsbereich\\02_Förderung\\Tools\\sc-heiligenstadt-budget\\Backup</code>';
       clearBtn.style.display = 'none';
     }
     updateMissingLinksBar();
