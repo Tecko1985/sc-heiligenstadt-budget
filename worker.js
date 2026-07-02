@@ -11,6 +11,13 @@
 // dort, siehe E:\ToolsUebersicht\admin-worker.js). Schuetzt den offenen
 // POST-Endpunkt davor, dass Unbeteiligte (die nur die URL kennen) Dateien
 // hochladen koennen.
+//
+// Dafuer zusaetzlich ein SERVICE BINDING noetig (Dashboard -> dieser Worker ->
+// Bindings -> Add a binding -> Service binding -> Ziel-Worker "landingpage",
+// Variablenname "LANDINGPAGE"). Ein normaler fetch() an die *.workers.dev-URL
+// der Landingpage wird von Cloudflare mit Error 1042 geblockt, weil beide Worker
+// dieselbe workers.dev-Subdomain teilen (sieht aus wie eine potenzielle
+// Endlosschleife, ist aber keine) - Service Bindings umgehen das komplett.
 
 const ALLOWED_ORIGIN = 'https://tecko1985.github.io';
 const NEXTCLOUD_BASE = 'https://nx88695.your-storageshare.de/public.php/dav/files';
@@ -42,14 +49,13 @@ function badRequest(msg) {
   });
 }
 
-const LANDINGPAGE_WORKER_URL = 'https://landingpage.michel-brunner.workers.dev';
-
 // Delegiert den Zugriffscode-Vergleich an die zentrale Landingpage (Aktion
 // verify-action-password) statt ihn lokal gegen ein eigenes Secret zu machen -
 // faellt bei Netzfehler oder nicht konfiguriertem Secret dort sicher zu (kein Zugriff).
-async function verifyActionPassword(scope, password) {
+// Laeuft ueber ein Service Binding (env.LANDINGPAGE), siehe Kommentar oben zu Error 1042.
+async function verifyActionPassword(env, scope, password) {
   try {
-    const resp = await fetch(LANDINGPAGE_WORKER_URL, {
+    const resp = await env.LANDINGPAGE.fetch('https://landingpage/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'verify-action-password', scope, password }),
@@ -96,7 +102,7 @@ export default {
       const note = (form.get('note') || '').toString().trim();
       const files = form.getAll('files').filter(f => typeof f !== 'string');
 
-      if (!(await verifyActionPassword('budget-beleg-eingang', code))) {
+      if (!(await verifyActionPassword(env, 'budget-beleg-eingang', code))) {
         return new Response(JSON.stringify({ ok: false, error: 'Falscher Zugriffscode.' }), {
           status: 401,
           headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
