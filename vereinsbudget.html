@@ -1061,11 +1061,30 @@
     spanEl.replaceWith(select);
     select.focus();
   }
-  const CLEAR_ALL_PASSWORD = '1911';
-  function clearAll() {
+  // Das Passwort für "Saison leeren" wird serverseitig geprüft (Worker-Secret
+  // PW_BUDGET_LEEREN im ToolsUebersicht-Worker "landingpage") und steht nicht
+  // mehr im Quellcode. Ohne Internetverbindung ist die Aktion nicht möglich.
+  const PASSWORT_PRUEF_URL = 'https://landingpage.michel-brunner.workers.dev';
+  async function clearAll() {
     const pw = prompt('🔒 Zum Leeren der Saison bitte Passwort eingeben:');
     if (pw === null) return;
-    if (pw !== CLEAR_ALL_PASSWORD) return toast('❌ Falsches Passwort — Saison wurde nicht geleert.');
+    let resp;
+    try {
+      resp = await fetch(PASSWORT_PRUEF_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify-action-password', scope: 'budget-saison-leeren', password: pw })
+      });
+    } catch (_) {
+      return toast('❌ Passwortprüfung nicht möglich — keine Verbindung zum Server.');
+    }
+    if (resp.status === 403) return toast('❌ Falsches Passwort — Saison wurde nicht geleert.');
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      return toast('❌ ' + (body.error === 'Unbekannte Aktion'
+        ? 'Passwortprüfung noch nicht verfügbar — das Worker-Update (landingpage) muss erst deployed werden.'
+        : 'Passwortprüfung fehlgeschlagen: ' + (body.error || ('HTTP ' + resp.status))));
+    }
     if (!confirm(`Alle Daten der Saison ${currentSeason} wirklich löschen?`)) return;
     localStorage.removeItem(storageKey('income'));
     localStorage.removeItem(storageKey('expense'));
@@ -2184,8 +2203,9 @@
   }
 
   // ── Versionsinfo ─────────────────────────────────────────────────────────
-  const APP_VERSION = '1.1';
+  const APP_VERSION = '1.2';
   const CHANGELOG = [
+    'v1.2 — Das Passwort für „Saison leeren" wird jetzt serverseitig geprüft und steht nicht mehr im öffentlichen Quellcode',
     'v1.1 — Saison-übergreifende Sicherung: Datendatei und Backups enthalten jetzt ALLE Saisons und die eigenen Kategorien — ein Saisonwechsel überschreibt die Cloud-Kopie der anderen Saisons nicht mehr',
     'v1.1 — Beleg-Übernahme aus dem Eingang bricht bei Kopierfehlern ab, statt den Original-Beleg zu löschen',
     'v1.1 — Sicherheitsabfrage beim Löschen einzelner Buchungen; klare Warnung, wenn der Browser-Speicher voll ist',
