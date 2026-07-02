@@ -1685,7 +1685,7 @@
 
     function rowsHtml(entries) {
       return entries.map(e => `<tr>
-        <td>${e.date}</td>
+        <td>${escapeHtml(e.date)}</td>
         <td>${escapeHtml(e.cat)}</td>
         <td>${escapeHtml(e.desc)}</td>
         <td class="print-amount">${fmt(e.amount)}</td>
@@ -2010,7 +2010,7 @@
       <div class="wish-item" style="flex-wrap:wrap;">
         <div class="wish-text" style="flex:1 1 100%;">
           <strong>${escapeHtml(s.desc)}</strong>${s.amount ? ' — ' + fmt(s.amount) : ''}
-          <div class="wish-meta">${s.date} · von ${escapeHtml(s.name)}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
+          <div class="wish-meta">${escapeHtml(s.date || '')} · von ${escapeHtml(s.name)}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
           ${s.reviewedByGS ? `<div class="wish-meta" style="color:var(--green); font-weight:600;">✅ Geprüft${s._dir && s._dir.name === 'Erledigt' ? ' & abgelegt' : ''} von Geschäftsstelle${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
         </div>
         <select class="cat-edit-select" id="eingangType_${s.id}" onchange="updateEingangCatOptions('${s.id}')">
@@ -2371,7 +2371,7 @@
     const attIcon = hasFile ? (e.attachment.external ? '📁' : '📎') + (extraCount ? `+${extraCount}` : '') : '➕📎';
     return `<li class="entry-item">
       <span class="cat" title="Klicken zum Ändern der Kategorie" onclick="editEntryCategory(this,'${type}', ${e.id})">${escapeHtml(e.cat)}</span>
-      <span class="desc">${escapeHtml(e.desc)}<br><small style="color:var(--muted)">${e.date} · von ${escapeHtml(e.enteredBy) || 'Unbekannt'}</small></span>
+      <span class="desc">${escapeHtml(e.desc)}<br><small style="color:var(--muted)">${escapeHtml(e.date)} · von ${escapeHtml(e.enteredBy) || 'Unbekannt'}</small></span>
       <span class="val ${type === 'income' ? 'pos' : 'neg'}">${fmt(e.amount)}</span>
       <button class="attach-btn ${hasFile ? 'has-file' : ''}" title="${hasFile ? 'Beleg ansehen: ' + escapeHtml(e.attachment.name) + (extraCount ? ` (+${extraCount} weitere)` : '') + (e.attachment.external ? ' (im Ordner)' : ' (eingebettet)') : 'Beleg anhängen'}" onclick="viewAttachment('${type}', ${e.id})">${attIcon}</button>
       ${hasFile ? `<button class="icon-btn" title="Weitere Datei anhängen" onclick="attachToExisting('${type}', ${e.id})" style="font-size:0.8rem">➕📎</button>` : ''}
