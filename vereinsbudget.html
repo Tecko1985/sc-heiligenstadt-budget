@@ -784,12 +784,28 @@
 
   function storageKey(type) { return `vereinsbudget_${currentSeason}_${type}`; }
 
+  // Lokales Datum als YYYY-MM-DD. Nicht toISOString() verwenden — das liefert das
+  // UTC-Datum und springt in der deutschen Zeitzone nach Mitternacht auf den Vortag.
+  function localDateIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   function load(type) {
     try { return JSON.parse(localStorage.getItem(storageKey(type))) || []; }
     catch { return []; }
   }
+  function loadSeasonEntries(season, type) {
+    try { return JSON.parse(localStorage.getItem(`vereinsbudget_${season}_${type}`)) || []; }
+    catch { return []; }
+  }
   function save(type, data) {
-    localStorage.setItem(storageKey(type), JSON.stringify(data));
+    try {
+      localStorage.setItem(storageKey(type), JSON.stringify(data));
+    } catch (e) {
+      toast('❌ Browser-Speicher voll — Änderung NICHT gespeichert! Bitte Belege-Ordner verknüpfen oder eingebettete Belege entfernen.');
+      throw e;
+    }
     markUnsaved();
     scheduleAutoSave();
   }
@@ -969,6 +985,7 @@
       return;
     }
     const reader = new FileReader();
+    reader.onerror = () => toast('❌ Beleg konnte nicht gelesen werden.');
     reader.onload = ev => {
       pendingAttach[type] = { name: file.name, mime: file.type || 'application/octet-stream', data: ev.target.result };
       nameEl.textContent = file.name;
@@ -1004,7 +1021,7 @@
     entries.push({
       id: Date.now(),
       desc, amount: Math.round(amount * 100) / 100, cat,
-      date: new Date().toISOString().slice(0,10),
+      date: localDateIso(),
       attachment: pendingAttach[type] || null,
       enteredBy: getUserName()
     });
@@ -1018,6 +1035,9 @@
     render();
   }
   function deleteEntry(type, id) {
+    const entry = load(type).find(e => e.id === id);
+    if (!entry) return;
+    if (!confirm(`"${entry.desc}" (${fmt(entry.amount)}) wirklich löschen?`)) return;
     const entries = load(type).filter(e => e.id !== id);
     save(type, entries);
     render();
@@ -1069,11 +1089,16 @@
         catch (err) { return toast('❌ Beleg konnte nicht im Ordner gespeichert werden: ' + err.message); }
       } else {
         if (file.size > MAX_ATTACH_BYTES) return toast('⚠️ Datei zu groß (max. 4 MB pro Beleg ohne Belege-Ordner).');
-        att = await new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload = ev => resolve({ name: file.name, mime: file.type || 'application/octet-stream', data: ev.target.result });
-          reader.readAsDataURL(file);
-        });
+        try {
+          att = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error || new Error('Datei konnte nicht gelesen werden'));
+            reader.onload = ev => resolve({ name: file.name, mime: file.type || 'application/octet-stream', data: ev.target.result });
+            reader.readAsDataURL(file);
+          });
+        } catch (err) {
+          return toast('❌ Beleg konnte nicht gelesen werden: ' + err.message);
+        }
       }
       const entries = load(type);
       const entry = entries.find(x => x.id === id);
@@ -1449,17 +1474,33 @@
     const incomes  = load('income');
     const expenses = load('expense');
     const wishes   = getWishes();
+    // ALLE Saisons mitsichern: Die Datei enthielt früher nur die aktuelle Saison —
+    // ein Saisonwechsel überschrieb damit die Cloud-Kopie aller anderen Saisons,
+    // die dann nur noch im Browser-Speicher eines einzelnen Geräts existierten.
+    const seasons = {};
+    let anySeasonEntries = false;
+    SEASONS.forEach((s) => {
+      const inc = loadSeasonEntries(s, 'income');
+      const exp = loadSeasonEntries(s, 'expense');
+      if (inc.length || exp.length) {
+        seasons[s] = { income: inc, expense: exp };
+        anySeasonEntries = true;
+      }
+    });
     return {
       data: {
         club: document.getElementById('clubName').value.trim(),
         season: currentSeason,
+        // Aktuelle Saison zusätzlich flach — ältere Seitenversionen lesen die Datei so weiter.
         income: incomes,
         expense: expenses,
+        seasons,
+        categories: { income: getCategories('income'), expense: getCategories('expense') },
         wishes: wishes,
         savedAt: new Date().toISOString(),
-        version: 3
+        version: 4
       },
-      hasEntries: incomes.length || expenses.length || wishes.length
+      hasEntries: anySeasonEntries || incomes.length || expenses.length || wishes.length
     };
   }
   async function saveToCloud(silent = false) {
@@ -1483,7 +1524,7 @@
     }
 
     if (silent) return; // ohne verknüpfte Datei kein automatischer Download
-    const filename = `vereinsbudget_${currentSeason.replace('/','-')}_${new Date().toISOString().slice(0,10)}.json`;
+    const filename = `vereinsbudget_${currentSeason.replace('/','-')}_${localDateIso()}.json`;
     download(filename, 'application/json', json);
     markSaved();
     toast(`💾 Datei „${filename}" heruntergeladen — jetzt auf den Storage Share hochladen!`);
@@ -1499,6 +1540,24 @@
     }
     localStorage.setItem(storageKey('income'),  JSON.stringify(data.income));
     localStorage.setItem(storageKey('expense'), JSON.stringify(data.expense));
+    // v4-Dateien: alle enthaltenen Saisons übernehmen. Saisons, die die Datei
+    // nicht enthält, bleiben lokal unangetastet (kein versehentliches Leeren).
+    if (data.seasons && typeof data.seasons === 'object') {
+      SEASONS.forEach((s) => {
+        const sd = data.seasons[s];
+        if (sd && Array.isArray(sd.income) && Array.isArray(sd.expense)) {
+          localStorage.setItem(`vereinsbudget_${s}_income`, JSON.stringify(sd.income));
+          localStorage.setItem(`vereinsbudget_${s}_expense`, JSON.stringify(sd.expense));
+        }
+      });
+    }
+    // Eigene Kategorien mitsynchronisieren (waren früher nur lokal pro Gerät).
+    if (data.categories) {
+      if (Array.isArray(data.categories.income) && data.categories.income.length) setCategories('income', data.categories.income);
+      if (Array.isArray(data.categories.expense) && data.categories.expense.length) setCategories('expense', data.categories.expense);
+      renderCategorySelect('income');
+      renderCategorySelect('expense');
+    }
     if (data.club) {
       localStorage.setItem('vereinsbudgetclub', data.club);
       document.getElementById('clubName').value = data.club;
@@ -2011,28 +2070,38 @@
 
     let attachment = null;
     const extraAttachments = [];
+    const bereitsKopiert = []; // im Belege-Ordner schon angelegte Dateien (Aufräumen bei Abbruch)
     try {
       const ok = await verifyPermission(eingangFolderHandle, 'read');
-      if (ok) {
-        const dir = sub._dir || eingangFolderHandle;
-        for (const f of (sub.files || [])) {
-          const fh = await dir.getFileHandle(f.fileName);
-          const file = await fh.getFile();
-          let att;
-          if (linkedFolderHandle) {
-            att = await writeAttachmentFile(file);
-          } else {
-            att = await new Promise(resolve => {
-              const reader = new FileReader();
-              reader.onload = ev => resolve({ name: f.fileOrigName, mime: file.type || f.fileMime, data: ev.target.result });
-              reader.readAsDataURL(file);
-            });
+      if (!ok) throw new Error('Leserechte für den Eingangs-Ordner verweigert');
+      const dir = sub._dir || eingangFolderHandle;
+      for (const f of (sub.files || [])) {
+        const fh = await dir.getFileHandle(f.fileName);
+        const file = await fh.getFile();
+        let att;
+        if (linkedFolderHandle) {
+          att = await writeAttachmentFile(file);
+          bereitsKopiert.push(att);
+        } else {
+          if (file.size > MAX_ATTACH_BYTES) {
+            throw new Error(`"${f.fileOrigName || f.fileName}" ist zu groß für den Browser-Speicher (max. 4 MB) — bitte zuerst einen Belege-Ordner verknüpfen`);
           }
-          if (!attachment) attachment = att; else extraAttachments.push(att);
+          att = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error || new Error('Datei konnte nicht gelesen werden'));
+            reader.onload = ev => resolve({ name: f.fileOrigName, mime: file.type || f.fileMime, data: ev.target.result });
+            reader.readAsDataURL(file);
+          });
         }
+        if (!attachment) attachment = att; else extraAttachments.push(att);
       }
     } catch (e) {
-      toast('⚠️ Beleg konnte nicht übernommen werden: ' + e.message);
+      // Übernahme ABBRECHEN: Vorher wurde der Eintrag trotzdem angelegt und die
+      // Original-Dateien aus dem Eingangs-Ordner gelöscht — der Beleg (Buchhaltungs-
+      // unterlage!) war damit unwiederbringlich weg. Eingang bleibt jetzt unverändert.
+      for (const att of bereitsKopiert) { await deleteAttachmentFile(att.storedAs); }
+      toast('❌ Übernahme abgebrochen — Beleg konnte nicht kopiert werden: ' + e.message);
+      return;
     }
 
     const entries = load(type);
@@ -2115,8 +2184,12 @@
   }
 
   // ── Versionsinfo ─────────────────────────────────────────────────────────
-  const APP_VERSION = '1.0';
+  const APP_VERSION = '1.1';
   const CHANGELOG = [
+    'v1.1 — Saison-übergreifende Sicherung: Datendatei und Backups enthalten jetzt ALLE Saisons und die eigenen Kategorien — ein Saisonwechsel überschreibt die Cloud-Kopie der anderen Saisons nicht mehr',
+    'v1.1 — Beleg-Übernahme aus dem Eingang bricht bei Kopierfehlern ab, statt den Original-Beleg zu löschen',
+    'v1.1 — Sicherheitsabfrage beim Löschen einzelner Buchungen; klare Warnung, wenn der Browser-Speicher voll ist',
+    'v1.1 — Datumsangaben verwenden lokale Zeit statt UTC (nach Mitternacht wurde bisher der Vortag eingetragen), auch im Beleg-Einreichungsformular',
     'Einnahmen & Ausgaben mit Kategorien, frei anlegbar und löschbar',
     'Dashboard mit Einnahmen-, Ausgaben- und Saldo-Übersicht',
     'Belege (Bilder/PDF) je Eintrag anhängen, ansehen und löschen — optional in eigenem Ordner statt im Browser-Speicher',

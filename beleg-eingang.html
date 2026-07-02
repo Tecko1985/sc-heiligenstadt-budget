@@ -130,6 +130,13 @@
   // direkter Browser-Uploads zum Storage Share). Siehe worker.js im Repo.
   const WORKER_URL = 'https://sc-heiligenstadt-beleg-upload.michel-brunner.workers.dev/';
 
+  // Lokales Datum als YYYY-MM-DD (nicht toISOString: das UTC-Datum springt in
+  // der deutschen Zeitzone nach Mitternacht auf den Vortag).
+  function localDateIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   function escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -164,7 +171,7 @@
     const code = document.getElementById('subCode').value.trim();
     const name = document.getElementById('subName').value.trim();
     const amount = document.getElementById('subAmount').value;
-    const date = document.getElementById('subDate').value || new Date().toISOString().slice(0,10);
+    const date = document.getElementById('subDate').value || localDateIso();
     const desc = document.getElementById('subDesc').value.trim();
     const note = document.getElementById('subNote').value.trim();
     if (!code) return toast('Bitte den Zugriffscode eingeben.');
@@ -203,7 +210,7 @@
     document.getElementById('subAmount').value = '';
     document.getElementById('subDesc').value = '';
     document.getElementById('subNote').value = '';
-    document.getElementById('subDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('subDate').value = localDateIso();
     pendingFiles = [];
     document.getElementById('subFile').value = '';
     renderFileList();
@@ -218,7 +225,7 @@
     setTimeout(() => t.classList.remove('show'), 3500);
   }
 
-  document.getElementById('subDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('subDate').value = localDateIso();
   document.getElementById('subName').value = localStorage.getItem('eingang_username') || '';
   document.getElementById('subName').addEventListener('input', e => localStorage.setItem('eingang_username', e.target.value.trim()));
   document.getElementById('subCode').value = localStorage.getItem('eingang_code') || '';
