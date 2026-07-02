@@ -4,9 +4,13 @@
 // Deploy: Cloudflare Dashboard -> Workers & Pages -> Create Worker -> diesen
 // Code einfuegen -> Settings -> Variables -> Secret "NEXTCLOUD_SHARE_TOKEN"
 // anlegen (Wert: der Token aus dem Freigabelink, z.B. "kr8K5LHTHoM2wXS").
-// Zusaetzlich Secret "ACCESS_CODE" anlegen (ein kurzer, an die Helfer
-// weitergegebener Code, z.B. "sc1911"). Schuetzt den offenen POST-Endpunkt
-// davor, dass Unbeteiligte (die nur die URL kennen) Dateien hochladen koennen.
+//
+// Der Zugriffscode fuer Helfer ist KEIN eigenes Secret hier mehr - er wird
+// per verify-action-password an die zentrale ToolsUebersicht-Landingpage
+// delegiert (Scope "budget-beleg-eingang", Secret PW_BUDGET_EINGANG_ZUGANG
+// dort, siehe E:\ToolsUebersicht\admin-worker.js). Schuetzt den offenen
+// POST-Endpunkt davor, dass Unbeteiligte (die nur die URL kennen) Dateien
+// hochladen koennen.
 
 const ALLOWED_ORIGIN = 'https://tecko1985.github.io';
 const NEXTCLOUD_BASE = 'https://nx88695.your-storageshare.de/public.php/dav/files';
@@ -36,6 +40,24 @@ function badRequest(msg) {
     status: 400,
     headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
   });
+}
+
+const LANDINGPAGE_WORKER_URL = 'https://landingpage.michel-brunner.workers.dev';
+
+// Delegiert den Zugriffscode-Vergleich an die zentrale Landingpage (Aktion
+// verify-action-password) statt ihn lokal gegen ein eigenes Secret zu machen -
+// faellt bei Netzfehler oder nicht konfiguriertem Secret dort sicher zu (kein Zugriff).
+async function verifyActionPassword(scope, password) {
+  try {
+    const resp = await fetch(LANDINGPAGE_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify-action-password', scope, password }),
+    });
+    return resp.ok;
+  } catch (_) {
+    return false;
+  }
 }
 
 async function putToNextcloud(token, filename, body, contentType) {
@@ -74,7 +96,7 @@ export default {
       const note = (form.get('note') || '').toString().trim();
       const files = form.getAll('files').filter(f => typeof f !== 'string');
 
-      if (env.ACCESS_CODE && code !== env.ACCESS_CODE) {
+      if (!(await verifyActionPassword('budget-beleg-eingang', code))) {
         return new Response(JSON.stringify({ ok: false, error: 'Falscher Zugriffscode.' }), {
           status: 401,
           headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
