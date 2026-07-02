@@ -41,6 +41,8 @@
     gap: 10px;
   }
   .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .header-logo { height: 40px; width: auto; display: block; }
   header h1 { font-size: 1.4rem; font-weight: 700; }
   header span.icon { font-size: 1.8rem; }
   .cloud-status {
@@ -436,9 +438,12 @@
     <span class="icon">⚽</span>
     <h1 id="clubTitle">Vereinsbudget</h1>
   </div>
-  <div class="cloud-status unsaved" id="cloudStatus">
-    <div class="dot"></div>
-    <span id="cloudStatusText">Nicht gespeichert</span>
+  <div class="header-right">
+    <div class="cloud-status unsaved" id="cloudStatus">
+      <div class="dot"></div>
+      <span id="cloudStatusText">Nicht gespeichert</span>
+    </div>
+    <img class="header-logo" src="logo.png" alt="1. SC 1911 e.V. Heilbad Heiligenstadt" />
   </div>
 </header>
 
@@ -2203,7 +2208,7 @@
   }
 
   // ── Versionsinfo ─────────────────────────────────────────────────────────
-  const APP_VERSION = '1.2';
+  const APP_VERSION = '1.3';
   const CHANGELOG = [
     'v1.2 — Das Passwort für „Saison leeren" wird jetzt serverseitig geprüft und steht nicht mehr im öffentlichen Quellcode',
     'v1.1 — Saison-übergreifende Sicherung: Datendatei und Backups enthalten jetzt ALLE Saisons und die eigenen Kategorien — ein Saisonwechsel überschreibt die Cloud-Kopie der anderen Saisons nicht mehr',
