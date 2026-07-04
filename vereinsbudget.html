@@ -430,9 +430,21 @@
     .cloud-panel, .export-bar, .season-bar button,
     .entry-form, .attach-row, .entry-item button { display: none !important; }
   }
+  .dashboard-bar { padding: 10px 32px 0; }
+  .back-to-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .back-to-dashboard:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+<div class="dashboard-bar"><a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a></div>
 <header>
   <div class="header-left">
     <span class="icon">⚽</span>
@@ -2208,8 +2220,9 @@
   }
 
   // ── Versionsinfo ─────────────────────────────────────────────────────────
-  const APP_VERSION = '1.0';
+  const APP_VERSION = '1.1';
   const CHANGELOG = [
+    '„Zurück zum Dashboard"-Link oben auf der Seite (Navigation von der ToolsUebersicht-Landingpage öffnet Tools jetzt im selben Tab)',
     'Einnahmen & Ausgaben mit Kategorien, frei anlegbar und löschbar',
     'Dashboard mit Einnahmen-, Ausgaben- und Saldo-Übersicht',
     'Mehrere Saisons: Datendatei und Backups enthalten alle Saisons und die eigenen Kategorien — ein Saisonwechsel überschreibt die Cloud-Kopie der anderen Saisons nicht',

@@ -76,9 +76,21 @@
   .lightbox-body { overflow: auto; padding: 10px; display: flex; align-items: center; justify-content: center; }
   .lightbox-body img { max-width: 100%; max-height: 70vh; }
   .lightbox-body iframe { width: 70vw; height: 70vh; border: none; }
+  .dashboard-bar { padding: 10px 20px 0; max-width: 760px; margin: 0 auto; }
+  .back-to-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .back-to-dashboard:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+<div class="dashboard-bar"><a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a></div>
 <header>
   <span class="icon">📋</span>
   <h1>Geschäftsstelle — Beleg-Eingang — 1. SC 1911 Heiligenstadt</h1>
