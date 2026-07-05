@@ -22,9 +22,11 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #eef1f6; color: var(--text); min-height: 100vh; }
-  header { background: var(--blue); color: white; padding: 18px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); flex-wrap: wrap; }
+  header { background: var(--blue); color: white; padding: 18px 24px; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); flex-wrap: wrap; }
+  .header-left { display: flex; align-items: center; gap: 12px; flex: 1 1 200px; }
+  .header-right { display: flex; align-items: center; flex: 1 1 200px; justify-content: flex-end; }
   header span.icon { font-size: 1.6rem; }
-  header h1 { font-size: 1.2rem; font-weight: 700; flex: 1; }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
   .header-logo { height: 40px; width: auto; display: block; }
   main { max-width: 760px; margin: 0 auto; padding: 24px 20px; }
   .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
@@ -76,25 +78,35 @@
   .lightbox-body { overflow: auto; padding: 10px; display: flex; align-items: center; justify-content: center; }
   .lightbox-body img { max-width: 100%; max-height: 70vh; }
   .lightbox-body iframe { width: 70vw; height: 70vh; border: none; }
-  .dashboard-bar { padding: 10px 20px 0; max-width: 760px; margin: 0 auto; }
   .back-to-dashboard {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 14px;
-    font-weight: 500;
-    color: var(--blue);
+    font-weight: 600;
+    color: white;
     text-decoration: none;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: background 0.15s ease;
   }
-  .back-to-dashboard:hover { text-decoration: underline; }
+  .back-to-dashboard:hover { background: rgba(255, 255, 255, 0.28); text-decoration: none; }
 </style>
 </head>
 <body>
-<div class="dashboard-bar"><a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a></div>
 <header>
-  <span class="icon">📋</span>
-  <h1>Geschäftsstelle — Beleg-Eingang — 1. SC 1911 Heiligenstadt</h1>
-  <img class="header-logo" src="logo.png" alt="1. SC 1911 e.V. Heilbad Heiligenstadt" />
+  <div class="header-left">
+    <span class="icon">📋</span>
+    <h1>Geschäftsstelle — Beleg-Eingang — 1. SC 1911 Heiligenstadt</h1>
+  </div>
+  <a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
+  <div class="header-right">
+    <img class="header-logo" src="logo.png" alt="1. SC 1911 e.V. Heilbad Heiligenstadt" />
+  </div>
 </header>
 
 <main>

@@ -35,13 +35,13 @@
     padding: 18px 32px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     flex-wrap: wrap;
     gap: 10px;
   }
-  .header-left { display: flex; align-items: center; gap: 14px; }
-  .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .header-left { display: flex; align-items: center; gap: 14px; flex: 1 1 200px; }
+  .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: 1 1 200px; justify-content: flex-end; }
   .header-logo { height: 40px; width: auto; display: block; }
   header h1 { font-size: 1.4rem; font-weight: 700; }
   header span.icon { font-size: 1.8rem; }
@@ -430,26 +430,32 @@
     .cloud-panel, .export-bar, .season-bar button,
     .entry-form, .attach-row, .entry-item button { display: none !important; }
   }
-  .dashboard-bar { padding: 10px 32px 0; }
   .back-to-dashboard {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 14px;
-    font-weight: 500;
-    color: var(--blue);
+    font-weight: 600;
+    color: white;
     text-decoration: none;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: background 0.15s ease;
   }
-  .back-to-dashboard:hover { text-decoration: underline; }
+  .back-to-dashboard:hover { background: rgba(255, 255, 255, 0.28); text-decoration: none; }
 </style>
 </head>
 <body>
-<div class="dashboard-bar"><a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a></div>
 <header>
   <div class="header-left">
     <span class="icon">⚽</span>
     <h1 id="clubTitle">Vereinsbudget</h1>
   </div>
+  <a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
   <div class="header-right">
     <div class="cloud-status unsaved" id="cloudStatus">
       <div class="dot"></div>
