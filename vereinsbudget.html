@@ -315,6 +315,7 @@
   .info-panel-body { padding: 20px; }
   .info-panel-body.collapsed { display: none; }
   .version-badge { display: inline-block; background: var(--blue-light); color: var(--blue); font-size: 0.75rem; font-weight: 700; border-radius: 99px; padding: 3px 10px; margin-bottom: 10px; }
+  header .version-badge { background: rgba(255,255,255,0.18); color: #fff; margin-bottom: 0; margin-left: 8px; vertical-align: middle; }
   .changelog-list { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; color: var(--text); }
   .changelog-list li { margin-left: 18px; }
   .wish-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
@@ -454,6 +455,7 @@
   <div class="header-left">
     <span class="icon">⚽</span>
     <h1 id="clubTitle">Vereinsbudget</h1>
+    <span class="version-badge" id="version-badge-header">Version 1.2</span>
   </div>
   <a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
   <div class="header-right">
@@ -2226,8 +2228,9 @@
   }
 
   // ── Versionsinfo ─────────────────────────────────────────────────────────
-  const APP_VERSION = '1.1';
+  const APP_VERSION = '1.2';
   const CHANGELOG = [
+    'Versions-Nummer steht jetzt zusätzlich direkt neben dem Titel oben im Header, nicht mehr nur hier unten.',
     '„Zurück zum Dashboard"-Link oben auf der Seite (Navigation von der ToolsUebersicht-Landingpage öffnet Tools jetzt im selben Tab)',
     'Einnahmen & Ausgaben mit Kategorien, frei anlegbar und löschbar',
     'Dashboard mit Einnahmen-, Ausgaben- und Saldo-Übersicht',
@@ -2246,7 +2249,7 @@
     'Übersichtliches Einstellungen-Panel: Ordner-Verknüpfungen (Beleg-, Eingangs-, Backup-Ordner), weitere Exporte und Änderungswünsche/Versionsinfo gebündelt an einem Ort'
   ];
   function renderChangelog() {
-    document.getElementById('versionBadge').textContent = `Version ${APP_VERSION}`;
+    document.querySelectorAll('.version-badge').forEach(el => { el.textContent = `Version ${APP_VERSION}`; });
     document.getElementById('changelogList').innerHTML = CHANGELOG.map(c => `<li>${c}</li>`).join('');
   }
   // ── Automatisches Backup ─────────────────────────────────────────────────────
