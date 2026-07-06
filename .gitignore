@@ -1,0 +1,6 @@
+# Echte Vereinsdaten und Belege niemals ins Repo
+vereinsbudget_daten.json
+Backup/
+Belege/
+*.json
+CLAUDE.md
