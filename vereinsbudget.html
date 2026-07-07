@@ -311,23 +311,16 @@
   .empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 20px 0; }
   .export-bar { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .export-bar span { font-weight: 600; font-size: 0.9rem; color: var(--muted); }
-  .info-panel { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-top: 20px; }
-  .info-panel-body { padding: 20px; }
-  .info-panel-body.collapsed { display: none; }
   .version-badge { display: inline-block; background: var(--blue-light); color: var(--blue); font-size: 0.75rem; font-weight: 700; border-radius: 99px; padding: 3px 10px; margin-bottom: 10px; }
   header .version-badge { background: rgba(255,255,255,0.18); color: #fff; margin-bottom: 0; margin-left: 8px; vertical-align: middle; }
   .changelog-list { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; color: var(--text); }
   .changelog-list li { margin-left: 18px; }
-  .wish-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
-  .wish-form textarea { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; font-family: inherit; resize: vertical; min-height: 70px; }
-  .wish-form textarea:focus { outline: none; border-color: var(--blue); }
   .wish-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
   .wish-item { background: var(--gray); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; display: flex; align-items: flex-start; gap: 10px; }
   .wish-item .wish-text { flex: 1; }
   .wish-item .wish-meta { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
   .wish-item button { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1rem; flex-shrink: 0; }
   .wish-item button:hover { color: var(--red); }
-  .wish-hint { font-size: 0.78rem; color: var(--muted); margin-top: -4px; margin-bottom: 4px; }
   .version-info-block { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
   .backup-hint { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4; }
   .backup-list { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
@@ -733,21 +726,6 @@
         <button class="btn btn-gray" onclick="exportCSV()">📊 CSV für Excel</button>
         <button class="btn btn-gray" onclick="openPrintModal()">🖨 Drucken / PDF</button>
       </div>
-    </div>
-  </div>
-
-  <div class="info-panel" id="wishPanel">
-    <button class="cloud-panel-header" onclick="toggleWishPanel()">
-      <span class="entry-group-arrow" id="wishPanelArrow">▸</span>
-      <span>💡 Änderungswünsche</span>
-    </button>
-    <div class="info-panel-body collapsed" id="wishPanelBody">
-      <div class="wish-form">
-        <textarea id="wishText" placeholder="Was sollte noch ergänzt oder geändert werden?"></textarea>
-        <div class="wish-hint">Wird unter dem Namen aus dem Feld „👤 Dein Name" oben gespeichert.</div>
-        <button class="btn btn-blue" style="align-self:flex-start" onclick="submitWish()">💡 Wunsch absenden</button>
-      </div>
-      <div class="wish-list" id="wishList"><div class="empty">Noch keine Änderungswünsche</div></div>
       <div class="version-info-block">
         <span class="version-badge" id="versionBadge">Version 1.0</span>
         <ul class="changelog-list" id="changelogList"></ul>
@@ -1517,7 +1495,6 @@
   function buildExportData() {
     const incomes  = load('income');
     const expenses = load('expense');
-    const wishes   = getWishes();
     // ALLE Saisons mitsichern: Die Datei enthielt früher nur die aktuelle Saison —
     // ein Saisonwechsel überschrieb damit die Cloud-Kopie aller anderen Saisons,
     // die dann nur noch im Browser-Speicher eines einzelnen Geräts existierten.
@@ -1540,11 +1517,10 @@
         expense: expenses,
         seasons,
         categories: { income: getCategories('income'), expense: getCategories('expense') },
-        wishes: wishes,
         savedAt: new Date().toISOString(),
         version: 4
       },
-      hasEntries: anySeasonEntries || incomes.length || expenses.length || wishes.length
+      hasEntries: anySeasonEntries || incomes.length || expenses.length
     };
   }
   async function saveToCloud(silent = false) {
@@ -1606,10 +1582,6 @@
       localStorage.setItem('vereinsbudgetclub', data.club);
       document.getElementById('clubName').value = data.club;
       updateClubTitle();
-    }
-    if (Array.isArray(data.wishes)) {
-      setWishes(data.wishes);
-      renderWishes();
     }
     hasUnsavedChanges = false;
     lastSavedAt = data.savedAt ? new Date(data.savedAt) : null;
@@ -2182,51 +2154,6 @@
       toast(deleted ? '🗑 Eingang verworfen' : '⚠️ Verworfen, aber Datei im Eingangs-Ordner konnte nicht gelöscht werden — Ordner neu verknüpfen.');
     })();
   }
-  // ── Änderungswünsche ─────────────────────────────────────────────────────
-  function getWishes() {
-    try { return JSON.parse(localStorage.getItem('vereinsbudget_wishes')) || []; }
-    catch { return []; }
-  }
-  function setWishes(arr) {
-    localStorage.setItem('vereinsbudget_wishes', JSON.stringify(arr));
-  }
-  function renderWishes() {
-    const list = document.getElementById('wishList');
-    const wishes = getWishes();
-    if (!wishes.length) { list.innerHTML = '<div class="empty">Noch keine Änderungswünsche</div>'; return; }
-    list.innerHTML = wishes.slice().reverse().map(w => `
-      <div class="wish-item">
-        <div class="wish-text">${escapeHtml(w.text)}<div class="wish-meta">${new Date(w.date).toLocaleString('de-DE')} · von ${escapeHtml(w.name || 'Unbekannt')}</div></div>
-        <button title="Wunsch löschen" onclick="deleteWish(${w.id})">✕</button>
-      </div>
-    `).join('');
-  }
-  function submitWish() {
-    const textEl = document.getElementById('wishText');
-    const text = textEl.value.trim();
-    if (!text) return toast('Bitte einen Wunsch eingeben.');
-    const wishes = getWishes();
-    wishes.push({ id: Date.now(), text, name: getUserName(), date: new Date().toISOString() });
-    setWishes(wishes);
-    textEl.value = '';
-    renderWishes();
-    scheduleAutoSave();
-    toast(linkedFileHandle ? '💡 Wunsch gespeichert (wird automatisch synchronisiert)' : '💡 Wunsch lokal gespeichert — verknüpfe einen Speicherort, damit er mit anderen geteilt wird');
-  }
-  function deleteWish(id) {
-    if (!confirm('Diesen Änderungswunsch löschen?')) return;
-    setWishes(getWishes().filter(w => w.id !== id));
-    renderWishes();
-    scheduleAutoSave();
-    toast('🗑 Wunsch gelöscht');
-  }
-  let wishPanelOpen = false;
-  function toggleWishPanel() {
-    wishPanelOpen = !wishPanelOpen;
-    document.getElementById('wishPanelBody').classList.toggle('collapsed', !wishPanelOpen);
-    document.getElementById('wishPanelArrow').textContent = wishPanelOpen ? '▾' : '▸';
-  }
-
   // ── Versionsinfo ─────────────────────────────────────────────────────────
   const APP_VERSION = '1.0';
   const CHANGELOG = [
@@ -2244,7 +2171,8 @@
     'Automatische lokale Backups (letzte 5) sowie optionales Backup in einem verknüpften Ordner',
     'Separates, mobil-fähiges Beleg-Einreichungsformular (beleg-eingang.html) für Helfer ohne Budget-Zugriff — Upload per Foto/PDF über Cloudflare-Worker-Proxy mit serverseitig geprüftem Zugriffscode, funktioniert auf jedem Gerät/Browser ohne Login',
     'Eingehende Helfer-Belege im Hauptwerkzeug direkt aus dem Eingangs-Ordner einsehen, mit einem Klick als Einnahme/Ausgabe übernehmen (inkl. Kategoriewahl) oder verwerfen — beide Aktionen löschen den Beleg zuverlässig aus dem Eingangs-Ordner',
-    'Übersichtliches Einstellungen-Panel: Ordner-Verknüpfungen (Beleg-, Eingangs-, Backup-Ordner), weitere Exporte und Änderungswünsche/Versionsinfo gebündelt an einem Ort'
+    'Übersichtliches Einstellungen-Panel: Ordner-Verknüpfungen (Beleg-, Eingangs-, Backup-Ordner), weitere Exporte und Änderungswünsche/Versionsinfo gebündelt an einem Ort',
+    'Änderungswünsche-Formular entfernt — Feedback und Wünsche bitte jetzt zentral über die Tools-Übersicht im Tab Feedback & Hilfe einreichen'
   ];
   function renderChangelog() {
     document.querySelectorAll('.version-badge').forEach(el => { el.textContent = `Version ${APP_VERSION}`; });
@@ -2445,7 +2373,6 @@
   renderCategorySelect('expense');
   loadClub();
   loadUserName();
-  renderWishes();
   renderChangelog();
   restoreEingangFolder();
   render();
