@@ -24,8 +24,8 @@ im selbst gewählten Speicherort.
 - „Erfasst von"-Kennzeichnung pro Eintrag
 - Automatische lokale Backups (letzte 5) sowie optionales Backup in einem verknüpften Ordner
 - Eingehende Helfer-Belege direkt aus dem Eingangs-Ordner einsehen, mit einem Klick als Einnahme/Ausgabe übernehmen oder verwerfen
-- Änderungswünsche-Formular mit Speicherung im verknüpften Storage
 - Übersichtliches Einstellungen-Panel für alle Ordner-Verknüpfungen, Exporte und Versionsinfo
+- Feedback und Änderungswünsche laufen zentral über die Tools-Übersicht (Tab „Feedback & Hilfe")
 
 **Beleg-Einreichung (`beleg-eingang.html`)**
 - Separates, mobil-fähiges Formular für Helfer ohne Budget-Zugriff (z. B. zum Einreichen von Tankrechnungen)
