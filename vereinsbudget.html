@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⚽ Vereinsbudget</title>
+<style>
+  :root {
+    --green: #2d8c4e;
+    --green-light: #e8f5ed;
+    --red: #c0392b;
+    --red-light: #fdecea;
+    --blue: #1a56a0;
+    --blue-light: #e8f0fb;
+    --orange: #f59e0b;
+    --orange-light: #fef3c7;
+    --gray: #f4f5f7;
+    --border: #dde1e8;
+    --text: #1e2330;
+    --muted: #6b7280;
+    --white: #ffffff;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #eef1f6;
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--blue);
+    color: white;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; flex: 1 1 200px; }
+  .header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: 1 1 200px; justify-content: flex-end; }
+  .header-logo { height: 40px; width: auto; display: block; }
+  header h1 { font-size: 1.4rem; font-weight: 700; }
+  header span.icon { font-size: 1.8rem; }
+  .cloud-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: default;
+  }
+  .cloud-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; flex-shrink: 0; }
+  .cloud-status.saved .dot { background: #4ade80; }
+  .cloud-status.unsaved .dot { background: #fbbf24; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .season-bar {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+  }
+  .missing-links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .missing-links:empty { display: none; }
+  .season-bar label { font-weight: 600; color: var(--muted); }
+  .season-bar select, .season-bar input {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    background: var(--gray);
+  }
+  main { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .kpi { background: var(--white); border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); border-left: 4px solid var(--border); }
+  .kpi.income { border-color: var(--green); }
+  .kpi.expense { border-color: var(--red); }
+  .kpi.balance { border-color: var(--blue); }
+  .kpi.budget { border-color: var(--orange); }
+  .kpi .label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 6px; }
+  .kpi .amount { font-size: 1.7rem; font-weight: 800; }
+  .kpi.income .amount { color: var(--green); }
+  .kpi.expense .amount { color: var(--red); }
+  .kpi.balance .amount { color: var(--blue); }
+  .kpi .sub { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .card-header { padding: 16px 20px; font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+  .card-header.income { background: var(--green-light); color: var(--green); }
+  .card-header.expense { background: var(--red-light); color: var(--red); }
+  .card-header.eingang { background: var(--blue-light); color: var(--blue); }
+  .card-body { padding: 16px 20px; }
+  .entry-form { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-bottom: 10px; align-items: end; }
+  .entry-form input, .entry-form select { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 0.9rem; width: 100%; }
+  .entry-form input:focus, .entry-form select:focus { outline: none; border-color: var(--blue); }
+  .field-group { display: flex; flex-direction: column; gap: 4px; }
+  .field-group label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+  .attach-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 8px 12px;
+    background: var(--gray);
+    border-radius: 8px;
+  }
+  .attach-row label.file-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--blue);
+    cursor: pointer;
+  }
+  .attach-row .file-name { font-size: 0.8rem; color: var(--muted); flex: 1; }
+  .attach-row .clear-attach { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; }
+  .attach-row .clear-attach:hover { color: var(--red); }
+  .cat-field-wrap { position: relative; }
+  .cat-gear {
+    position: absolute;
+    top: 0; right: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: var(--blue);
+    font-weight: 600;
+  }
+  .cat-gear:hover { opacity: 0.7; }
+  .cat-manager {
+    display: none;
+    background: var(--gray);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  .cat-manager.show { display: block; }
+  .cat-manager .cat-add-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .cat-manager .cat-add-row input {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+  .cat-manager .cat-chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    padding: 4px 6px 4px 10px;
+    font-size: 0.78rem;
+    color: var(--text);
+  }
+  .cat-chip button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 2px;
+  }
+  .cat-chip button:hover { color: var(--red); }
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+    background: var(--gray);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+  .filter-field { display: flex; flex-direction: column; gap: 3px; }
+  .filter-field label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .filter-field input, .filter-field select {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 0.82rem;
+    background: var(--white);
+  }
+  .filter-field.grow { flex: 1; min-width: 140px; }
+  .filter-field-checkbox { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text); padding-bottom: 6px; }
+  .filter-field-checkbox input { width: auto; }
+  .filter-reset { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.78rem; cursor: pointer; color: var(--muted); }
+  .filter-reset:hover { color: var(--red); border-color: var(--red); }
+  .filter-count { font-size: 0.76rem; color: var(--muted); padding-bottom: 6px; }
+  .filter-toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--blue);
+    padding: 6px 2px;
+    margin-bottom: 6px;
+    font-family: inherit;
+  }
+  .filter-toggle-btn:hover { opacity: 0.8; }
+  .filter-toggle-btn .entry-group-arrow { color: var(--blue); }
+  .filter-bar.collapsed { display: none; }
+  .location-bar {
+    grid-column: 1 / -1;
+    background: var(--gray);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .location-bar .loc-icon { font-size: 1.4rem; }
+  .location-bar .loc-text { flex: 1; min-width: 180px; }
+  .location-bar .loc-title { font-weight: 700; font-size: 0.88rem; }
+  .location-bar .loc-sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .location-bar.linked { background: var(--green-light); border-color: #86efac; }
+  .location-bar.linked .loc-title { color: var(--green); }
+  .location-bar .loc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .location-bar .unsupported-note {
+    grid-column: 1 / -1;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: -4px;
+  }
+  .btn { border: none; border-radius: 8px; padding: 9px 16px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s, transform 0.1s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: scale(0.97); }
+  .btn-green { background: var(--green); color: white; }
+  .btn-red { background: var(--red); color: white; }
+  .btn-blue { background: var(--blue); color: white; }
+  .btn-orange { background: var(--orange); color: white; }
+  .btn-gray { background: var(--border); color: var(--text); }
+  .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+  .entry-list { list-style: none; display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+  .entry-group { list-style: none; }
+  .entry-group-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--gray);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+  }
+  .entry-group-header:hover { background: var(--blue-light); }
+  .entry-group-arrow { width: 12px; flex-shrink: 0; color: var(--muted); }
+  .entry-group-name { flex: 1; color: var(--text); }
+  .entry-group-count { background: var(--border); border-radius: 99px; padding: 1px 8px; font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+  .entry-group-total { font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+  .entry-group-items { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-left: 16px; }
+  .entry-item { display: flex; align-items: center; justify-content: space-between; background: var(--gray); border-radius: 8px; padding: 8px 12px; font-size: 0.88rem; gap: 8px; }
+  .entry-item .cat { background: var(--border); border-radius: 5px; padding: 2px 7px; font-size: 0.75rem; font-weight: 600; color: var(--muted); flex-shrink: 0; cursor: pointer; }
+  .entry-item .cat:hover { background: var(--blue-light); color: var(--blue); }
+  .cat-edit-select { font-size: 0.75rem; font-weight: 600; border-radius: 5px; border: 1px solid var(--blue); padding: 2px 4px; background: var(--white); color: var(--text); flex-shrink: 0; cursor: pointer; }
+  .entry-item .desc { flex: 1; }
+  .entry-item .val { font-weight: 700; flex-shrink: 0; }
+  .val.pos { color: var(--green); }
+  .val.neg { color: var(--red); }
+  .entry-item button.icon-btn { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1rem; padding: 0 2px; flex-shrink: 0; }
+  .entry-item button.icon-btn:hover { color: var(--red); }
+  .entry-item button.attach-btn { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0 2px; flex-shrink: 0; }
+  .entry-item button.attach-btn.has-file { color: var(--blue); }
+  .entry-item button.attach-btn.has-file:hover { opacity: 0.7; }
+  .entry-item button.attach-btn:not(.has-file) { color: var(--muted); opacity: 0.5; }
+  .cloud-panel { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px; }
+  .cloud-panel-header { background: var(--blue-light); color: var(--blue); padding: 14px 20px; font-weight: 700; font-size: 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; cursor: pointer; width: 100%; border: none; text-align: left; font-family: inherit; }
+  .cloud-panel-header:hover { background: #dde9f8; }
+  .cloud-panel-header .entry-group-arrow { color: var(--blue); }
+  .cloud-panel-body.collapsed { display: none; }
+  .cloud-panel-body { padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 600px) { .cloud-panel-body { grid-template-columns: 1fr; } }
+  .cloud-action { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .cloud-action .big-icon { font-size: 2.2rem; }
+  .cloud-action h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+  .cloud-action p { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+  .cloud-action.save-action { border-color: #86efac; background: #f0fdf4; }
+  .cloud-action.load-action { border-color: #93c5fd; background: #eff6ff; }
+  .steps { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 4px; }
+  .step { display: flex; align-items: flex-start; gap: 8px; font-size: 0.78rem; color: var(--muted); text-align: left; }
+  .step .num { background: var(--border); border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .last-saved { background: var(--gray); border-radius: 8px; padding: 10px 16px; font-size: 0.82rem; color: var(--muted); display: flex; align-items: center; gap: 8px; margin-top: 12px; grid-column: 1 / -1; }
+  .empty { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 20px 0; }
+  .export-bar { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 20px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .export-bar span { font-weight: 600; font-size: 0.9rem; color: var(--muted); }
+  .version-badge { display: inline-block; background: var(--blue-light); color: var(--blue); font-size: 0.75rem; font-weight: 700; border-radius: 99px; padding: 3px 10px; margin-bottom: 10px; }
+  header .version-badge { background: rgba(255,255,255,0.18); color: #fff; margin-bottom: 0; margin-left: 8px; vertical-align: middle; }
+  .changelog-list { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; color: var(--text); }
+  .changelog-list li { margin-left: 18px; }
+  .wish-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+  .wish-item { background: var(--gray); border-radius: 8px; padding: 10px 12px; font-size: 0.85rem; display: flex; align-items: flex-start; gap: 10px; }
+  .wish-item .wish-text { flex: 1; }
+  .wish-item .wish-meta { font-size: 0.72rem; color: var(--muted); margin-top: 3px; }
+  .wish-item button { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1rem; flex-shrink: 0; }
+  .wish-item button:hover { color: var(--red); }
+  .version-info-block { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .backup-hint { grid-column: 1 / -1; font-size: 0.82rem; color: var(--muted); margin: 0 0 12px; line-height: 1.4; }
+  .backup-list { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+  .backup-row { background: var(--gray); border-radius: 8px; padding: 8px 12px; font-size: 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .backup-date { color: var(--text); }
+  .backup-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .backup-actions button { background: none; border: none; cursor: pointer; font-size: 0.95rem; padding: 2px 5px; border-radius: 5px; }
+  .backup-actions button:hover { background: var(--border); }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: white; padding: 12px 20px; border-radius: 10px; font-size: 0.88rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2); opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 999; max-width: 320px; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  /* Lightbox / Beleg-Vorschau */
+  .lightbox-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+  }
+  .lightbox-overlay.show { display: flex; }
+  .lightbox-box {
+    background: var(--white);
+    border-radius: var(--radius);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+  }
+  .lightbox-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .lightbox-header h3 { font-size: 0.95rem; }
+  .lightbox-header .actions { display: flex; gap: 8px; }
+  .lightbox-body { padding: 18px; display: flex; align-items: center; justify-content: center; }
+  .lightbox-body img { max-width: 100%; max-height: 70vh; border-radius: 8px; }
+  .lightbox-body iframe { width: 70vw; height: 70vh; border: none; border-radius: 8px; }
+  .lightbox-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--muted); }
+  .lightbox-close:hover { color: var(--red); }
+  /* Druck-Optionen-Modal */
+  .print-modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    padding: 24px;
+  }
+  .print-modal-overlay.show { display: flex; }
+  .print-modal-box {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  }
+  .print-modal-box h3 { margin-bottom: 10px; font-size: 1.05rem; }
+  .print-modal-box p { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+  .print-option-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .print-option-row input { width: 16px; height: 16px; cursor: pointer; }
+  .print-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+  /* Eigene Druckansicht */
+  #printArea { display: none; }
+  body.printing-report > *:not(#printArea) { display: none !important; }
+  body.printing-report #printArea { display: block; padding: 20px; }
+  #printArea h1 { font-size: 1.4rem; margin-bottom: 4px; color: #000; }
+  #printArea h2 { font-size: 1.05rem; color: #444; font-weight: 600; margin-bottom: 2px; }
+  #printArea .print-meta { font-size: 0.8rem; color: #666; margin-bottom: 18px; }
+  #printArea h3 { font-size: 1rem; margin: 20px 0 8px; border-bottom: 2px solid #ccc; padding-bottom: 4px; color: #000; }
+  .print-summary { margin-bottom: 10px; font-size: 0.92rem; color: #000; }
+  .print-summary td { padding: 3px 12px 3px 0; }
+  .print-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 10px; color: #000; }
+  .print-table th, .print-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
+  .print-amount { text-align: right; white-space: nowrap; }
+  .print-receipt-ref { font-size: 0.8rem; color: #444; }
+  .print-receipts-title { font-size: 1.05rem; margin: 24px 0 4px; color: #000; }
+  .print-receipt-page { page-break-before: always; padding-top: 16px; }
+  .print-receipt-header { font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; border-bottom: 1px solid #ccc; padding-bottom: 6px; color: #000; }
+  .print-receipt-img { display: block; max-width: 100%; max-height: 85vh; margin: 0 auto; }
+  .print-receipt-pdf { width: 100%; height: 85vh; border: 1px solid #ccc; }
+  .print-receipt-missing-block { color: #777; font-size: 0.85rem; padding: 24px; border: 1px dashed #ccc; text-align: center; }
+  @media print {
+    #printArea .print-table tr { page-break-inside: avoid; }
+    .cloud-panel, .export-bar, .season-bar button,
+    .entry-form, .attach-row, .entry-item button { display: none !important; }
+  }
+  .back-to-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: background 0.15s ease;
+  }
+  .back-to-dashboard:hover { background: rgba(255, 255, 255, 0.28); text-decoration: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <span class="icon">⚽</span>
+    <h1 id="clubTitle">Vereinsbudget</h1>
+    <span class="version-badge" id="version-badge-header">Version 1.2</span>
+  </div>
+  <a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
+  <div class="header-right">
+    <div class="cloud-status unsaved" id="cloudStatus">
+      <div class="dot"></div>
+      <span id="cloudStatusText">Nicht gespeichert</span>
+    </div>
+    <img class="header-logo" src="logo.png" alt="1. SC 1911 e.V. Heilbad Heiligenstadt" />
+  </div>
+</header>
+
+<div class="season-bar">
+  <label>Verein:</label>
+  <input type="text" id="clubName" placeholder="z. B. SV Musterstadt" style="width:200px" />
+  <label>Saison:</label>
+  <select id="seasonSelect"></select>
+  <label>👤 Dein Name:</label>
+  <input type="text" id="userName" placeholder="z. B. Michel" style="width:140px" />
+  <button class="btn btn-gray btn-sm" onclick="clearAll()">🗑 Saison leeren</button>
+  <span class="missing-links" id="missingLinksBar"></span>
+</div>
+
+<main>
+  <div class="kpi-row">
+    <div class="kpi income">
+      <div class="label">📥 Einnahmen gesamt</div>
+      <div class="amount" id="kpiIncome">0,00 €</div>
+      <div class="sub" id="kpiIncomeCount">0 Posten</div>
+    </div>
+    <div class="kpi expense">
+      <div class="label">📤 Ausgaben gesamt</div>
+      <div class="amount" id="kpiExpense">0,00 €</div>
+      <div class="sub" id="kpiExpenseCount">0 Posten</div>
+    </div>
+    <div class="kpi balance">
+      <div class="label">💰 Saldo</div>
+      <div class="amount" id="kpiBalance">0,00 €</div>
+      <div class="sub" id="kpiBalanceSub">—</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-header income">📥 Einnahmen</div>
+      <div class="card-body">
+        <div class="entry-form">
+          <div class="field-group" style="grid-column:1/-1">
+            <label>Beschreibung</label>
+            <input type="text" id="incDesc" placeholder="z. B. Mitgliedsbeiträge Q1" />
+          </div>
+          <div class="field-group">
+            <label>Betrag (€)</label>
+            <input type="number" id="incAmount" placeholder="0,00" min="0" step="0.01" />
+          </div>
+          <div class="field-group cat-field-wrap">
+            <label>Kategorie</label>
+            <select id="incCat"></select>
+            <button class="cat-gear" onclick="toggleCatManager('income')">⚙️ verwalten</button>
+          </div>
+          <div class="field-group">
+            <label>&nbsp;</label>
+            <button class="btn btn-green" onclick="addEntry('income')">+ Hinzufügen</button>
+          </div>
+        </div>
+        <div class="cat-manager" id="incCatManager">
+          <div class="cat-add-row">
+            <input type="text" id="incCatNew" placeholder="Neue Kategorie eingeben…" />
+            <button class="btn btn-green btn-sm" onclick="addCategory('income')">+ Anlegen</button>
+          </div>
+          <div class="cat-chip-list" id="incCatChips"></div>
+        </div>
+        <div class="attach-row">
+          <label class="file-label" for="incFile">📎 Beleg anhängen</label>
+          <input type="file" id="incFile" accept="image/*,.pdf" style="display:none" onchange="handleAttachSelect(event,'income')" />
+          <span class="file-name" id="incFileName">Kein Beleg ausgewählt</span>
+          <button class="clear-attach" id="incFileClear" style="display:none" onclick="clearPendingAttach('income')">✕ entfernen</button>
+        </div>
+        <button class="filter-toggle-btn" onclick="toggleFilterPanel('income')">
+          <span class="entry-group-arrow" id="incFilterArrow">▸</span>
+          <span>🔍 Suche &amp; Filter</span>
+        </button>
+        <div class="filter-bar collapsed" id="incFilterBar">
+          <div class="filter-field grow">
+            <label>Suche</label>
+            <input type="text" id="incFilterSearch" placeholder="Beschreibung oder Name…" oninput="applyListFilters('income')" />
+          </div>
+          <div class="filter-field">
+            <label>Kategorie</label>
+            <select id="incFilterCat" onchange="applyListFilters('income')"><option value="">Alle</option></select>
+          </div>
+          <div class="filter-field">
+            <label>Von</label>
+            <input type="date" id="incFilterFrom" onchange="applyListFilters('income')" />
+          </div>
+          <div class="filter-field">
+            <label>Bis</label>
+            <input type="date" id="incFilterTo" onchange="applyListFilters('income')" />
+          </div>
+          <div class="filter-field-checkbox">
+            <input type="checkbox" id="incFilterAttachOnly" onchange="applyListFilters('income')" />
+            <label for="incFilterAttachOnly">Nur mit Beleg</label>
+          </div>
+          <span class="filter-count" id="incFilterCount"></span>
+          <button class="filter-reset" onclick="resetListFilters('income')">✕ Filter zurücksetzen</button>
+        </div>
+        <ul class="entry-list" id="incomeList"><li class="empty">Noch keine Einnahmen</li></ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header expense">📤 Ausgaben</div>
+      <div class="card-body">
+        <div class="entry-form">
+          <div class="field-group" style="grid-column:1/-1">
+            <label>Beschreibung</label>
+            <input type="text" id="expDesc" placeholder="z. B. Platzmiete März" />
+          </div>
+          <div class="field-group">
+            <label>Betrag (€)</label>
+            <input type="number" id="expAmount" placeholder="0,00" min="0" step="0.01" />
+          </div>
+          <div class="field-group cat-field-wrap">
+            <label>Kategorie</label>
+            <select id="expCat"></select>
+            <button class="cat-gear" onclick="toggleCatManager('expense')">⚙️ verwalten</button>
+          </div>
+          <div class="field-group">
+            <label>&nbsp;</label>
+            <button class="btn btn-red" onclick="addEntry('expense')">+ Hinzufügen</button>
+          </div>
+        </div>
+        <div class="cat-manager" id="expCatManager">
+          <div class="cat-add-row">
+            <input type="text" id="expCatNew" placeholder="Neue Kategorie eingeben…" />
+            <button class="btn btn-red btn-sm" onclick="addCategory('expense')">+ Anlegen</button>
+          </div>
+          <div class="cat-chip-list" id="expCatChips"></div>
+        </div>
+        <div class="attach-row">
+          <label class="file-label" for="expFile">📎 Beleg anhängen</label>
+          <input type="file" id="expFile" accept="image/*,.pdf" style="display:none" onchange="handleAttachSelect(event,'expense')" />
+          <span class="file-name" id="expFileName">Kein Beleg ausgewählt</span>
+          <button class="clear-attach" id="expFileClear" style="display:none" onclick="clearPendingAttach('expense')">✕ entfernen</button>
+        </div>
+        <button class="filter-toggle-btn" onclick="toggleFilterPanel('expense')">
+          <span class="entry-group-arrow" id="expFilterArrow">▸</span>
+          <span>🔍 Suche &amp; Filter</span>
+        </button>
+        <div class="filter-bar collapsed" id="expFilterBar">
+          <div class="filter-field grow">
+            <label>Suche</label>
+            <input type="text" id="expFilterSearch" placeholder="Beschreibung oder Name…" oninput="applyListFilters('expense')" />
+          </div>
+          <div class="filter-field">
+            <label>Kategorie</label>
+            <select id="expFilterCat" onchange="applyListFilters('expense')"><option value="">Alle</option></select>
+          </div>
+          <div class="filter-field">
+            <label>Von</label>
+            <input type="date" id="expFilterFrom" onchange="applyListFilters('expense')" />
+          </div>
+          <div class="filter-field">
+            <label>Bis</label>
+            <input type="date" id="expFilterTo" onchange="applyListFilters('expense')" />
+          </div>
+          <div class="filter-field-checkbox">
+            <input type="checkbox" id="expFilterAttachOnly" onchange="applyListFilters('expense')" />
+            <label for="expFilterAttachOnly">Nur mit Beleg</label>
+          </div>
+          <span class="filter-count" id="expFilterCount"></span>
+          <button class="filter-reset" onclick="resetListFilters('expense')">✕ Filter zurücksetzen</button>
+        </div>
+        <ul class="entry-list" id="expenseList"><li class="empty">Noch keine Ausgaben</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="eingangPanel" style="margin-bottom:28px;">
+    <div class="card-header eingang">📋 Eingehende Rechnungen von Helfern</div>
+    <div class="card-body">
+      <p class="hint" style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;">Hier erscheinen Belege, die Helfer über das separate Einreichungsformular hochgeladen haben (z. B. Tankrechnungen). Den Eingangs-Ordner verknüpfst du unter „⚙️ Einstellungen" weiter unten.</p>
+      <div class="wish-list" id="eingangList"><div class="empty">Kein Eingangs-Ordner verknüpft</div></div>
+    </div>
+  </div>
+
+  <div class="cloud-panel" id="cloudPanel">
+    <button class="cloud-panel-header" onclick="toggleCloudPanel()">
+      <span class="entry-group-arrow" id="cloudPanelArrow">▸</span>
+      <span>⚙️ Einstellungen</span>
+    </button>
+    <div class="cloud-panel-body collapsed" id="cloudPanelBody">
+      <div class="location-bar" id="locationBar">
+        <span class="loc-icon">📌</span>
+        <div class="loc-text">
+          <div class="loc-title" id="locTitle">Kein fester Speicherort festgelegt</div>
+          <div class="loc-sub" id="locSub">Lege einmal eine Datei fest (z. B. auf deinem gemappten Storage-Share-Laufwerk) — danach speichert/lädt der Button direkt dorthin, ohne Dialog.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\05_Nachwuchsbereich\02_Förderung\Tools\sc-heiligenstadt-budget\vereinsbudget_daten.json</code></div>
+        </div>
+        <div class="loc-actions">
+          <button class="btn btn-orange btn-sm" id="locReconnectBtn" style="display:none" onclick="reconnectFileLocation()">🔌 Verbinden &amp; laden</button>
+          <button class="btn btn-blue btn-sm" onclick="pickFileLocation()">📌 Ort festlegen</button>
+          <button class="btn btn-gray btn-sm" id="locClearBtn" style="display:none" onclick="clearFileLocation()">🔓 Verknüpfung lösen</button>
+        </div>
+      </div>
+      <div class="unsupported-note" id="locUnsupportedNote" style="display:none">
+        ⚠️ Dein Browser unterstützt das direkte Festlegen eines Speicherortes nicht (funktioniert in Chrome/Edge, nicht in Firefox/Safari). Nutze stattdessen den manuellen Download/Upload unten.
+      </div>
+      <div class="location-bar" id="folderBar">
+        <span class="loc-icon">📁</span>
+        <div class="loc-text">
+          <div class="loc-title" id="folderTitle">Kein Belege-Ordner festgelegt</div>
+          <div class="loc-sub" id="folderSub">Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — neue Belege werden dann als einzelne Dateien dort gespeichert, statt im begrenzten Browser-Speicher. Empfehlenswert, wenn viele Belege zusammenkommen.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\05_Nachwuchsbereich\02_Förderung\Tools\sc-heiligenstadt-budget\Belege</code></div>
+        </div>
+        <div class="loc-actions">
+          <button class="btn btn-blue btn-sm" onclick="pickBelegeFolder()">📁 Ordner festlegen</button>
+          <button class="btn btn-gray btn-sm" id="folderClearBtn" style="display:none" onclick="clearBelegeFolder()">🔓 Verknüpfung lösen</button>
+        </div>
+      </div>
+      <div class="location-bar" id="eingangFolderBar">
+        <span class="loc-icon">📥</span>
+        <div class="loc-text">
+          <div class="loc-title" id="eingangFolderTitle">Kein Eingangs-Ordner festgelegt</div>
+          <div class="loc-sub" id="eingangFolderSub">Verknüpfe denselben Ordner, den Helfer im separaten Beleg-Einreichungsformular (<code>beleg-eingang.html</code>) ausgewählt haben — z. B. für Tankbelege.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\02_Geschäftsstelle\Belege_aus_Belegtool</code></div>
+        </div>
+        <div class="loc-actions">
+          <button class="btn btn-orange btn-sm" id="eingangFolderReconnectBtn" style="display:none" onclick="reconnectEingangFolder()">🔌 Verbinden</button>
+          <button class="btn btn-blue btn-sm" onclick="pickEingangFolder()">📁 Ordner festlegen</button>
+          <button class="btn btn-gray btn-sm" id="eingangFolderClearBtn" style="display:none" onclick="clearEingangFolder()">🔓 Verknüpfung lösen</button>
+        </div>
+      </div>
+      <div class="location-bar" id="backupFolderBar">
+        <span class="loc-icon">🗄️</span>
+        <div class="loc-text">
+          <div class="loc-title" id="backupFolderTitle">Kein Backup-Ordner festgelegt</div>
+          <div class="loc-sub" id="backupFolderSub">Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — bei jedem Start wird dort zusätzlich eine datierte Backup-Datei abgelegt.<br>Empfohlener Ort: <code>C:\Users\Michel Brunner\Nextcloud\05_Nachwuchsbereich\02_Förderung\Tools\sc-heiligenstadt-budget\Backup</code></div>
+        </div>
+        <div class="loc-actions">
+          <button class="btn btn-orange btn-sm" id="backupFolderReconnectBtn" style="display:none" onclick="reconnectBackupFolder()">🔌 Verbinden</button>
+          <button class="btn btn-blue btn-sm" onclick="pickBackupFolder()">📁 Ordner festlegen</button>
+          <button class="btn btn-gray btn-sm" id="backupFolderClearBtn" style="display:none" onclick="clearBackupFolder()">🔓 Verknüpfung lösen</button>
+        </div>
+      </div>
+      <p class="backup-hint">Bei jedem Start der App wird automatisch eine datierte Sicherung der aktuellen Daten angelegt — lokal in diesem Browser und, falls verknüpft, zusätzlich als Datei im Backup-Ordner. So lässt sich ein älterer Stand wiederherstellen, falls versehentlich etwas gelöscht oder überschrieben wurde.</p>
+      <div class="export-bar" style="grid-column:1 / -1; box-shadow:none; padding:0; margin-bottom:10px;">
+        <button class="btn btn-gray" onclick="performAutoBackup(true)">🗄️ Jetzt Backup erstellen</button>
+      </div>
+      <ul class="backup-list" id="backupList"><li class="empty">Noch keine Backups vorhanden</li></ul>
+
+      <div class="cloud-action save-action">
+        <div class="big-icon">💾</div>
+        <h3 id="saveActionTitle">In Cloud speichern</h3>
+        <p id="saveActionDesc">Erzeugt eine <code>daten.json</code> mit allen Daten <strong>und Belegen</strong> zum Herunterladen.</p>
+        <div class="steps" id="saveActionSteps">
+          <div class="step"><span class="num">1</span><span>Klick auf „Jetzt speichern" → Datei wird heruntergeladen</span></div>
+          <div class="step"><span class="num">2</span><span>Datei auf den Hetzner Storage Share hochladen</span></div>
+          <div class="step"><span class="num">3</span><span>Fertig — andere Geräte können sie laden</span></div>
+        </div>
+        <button class="btn btn-green" style="margin-top:8px; width:100%" onclick="saveToCloud()" id="saveActionBtn">💾 Jetzt speichern</button>
+      </div>
+      <div class="cloud-action load-action">
+        <div class="big-icon">☁️</div>
+        <h3 id="loadActionTitle">Aus Cloud laden</h3>
+        <p id="loadActionDesc">Lade die <code>daten.json</code> vom Storage Share herunter und importiere sie hier.</p>
+        <div class="steps" id="loadActionSteps">
+          <div class="step"><span class="num">1</span><span>Datei vom Hetzner Storage Share herunterladen</span></div>
+          <div class="step"><span class="num">2</span><span>Klick auf „Datei auswählen" und die <code>daten.json</code> öffnen</span></div>
+          <div class="step"><span class="num">3</span><span>App lädt alle Daten und Belege automatisch</span></div>
+        </div>
+        <button class="btn btn-blue" style="margin-top:8px; width:100%" onclick="loadFromCloud()" id="loadActionBtn">📂 Datei auswählen</button>
+        <input type="file" id="cloudFile" accept=".json" style="display:none" onchange="handleCloudLoad(event)" />
+      </div>
+      <div class="last-saved" id="lastSavedInfo">
+        ℹ️ Noch keine Cloud-Datei geladen oder gespeichert in dieser Sitzung.
+      </div>
+      <div class="export-bar" style="grid-column:1 / -1; box-shadow:none; padding:0;">
+        <button class="btn btn-gray" onclick="exportCSV()">📊 CSV für Excel</button>
+        <button class="btn btn-gray" onclick="openPrintModal()">🖨 Drucken / PDF</button>
+      </div>
+      <div class="version-info-block">
+        <span class="version-badge" id="versionBadge">Version 1.0</span>
+        <ul class="changelog-list" id="changelogList"></ul>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="printArea"><div id="printContent"></div></div>
+
+<div class="print-modal-overlay" id="printModalOverlay" onclick="if(event.target===this) closePrintModal()">
+  <div class="print-modal-box">
+    <h3>🖨 Drucken / als PDF speichern</h3>
+    <p>Wenn aktiviert, wird nach der Übersicht jeder Beleg als eigene Seite in voller Größe angehängt (Bilder und PDFs) — so dient der Ausdruck auch als vollständiger Buchungsnachweis.</p>
+    <label class="print-option-row">
+      <input type="checkbox" id="printIncludeAttachments" checked />
+      <span>📎 Belege als Seiten anhängen</span>
+    </label>
+    <div class="print-actions">
+      <button class="btn btn-gray" onclick="closePrintModal()">Abbrechen</button>
+      <button class="btn btn-blue" onclick="executePrint(document.getElementById('printIncludeAttachments').checked)">🖨 Weiter</button>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="if(event.target===this) closeLightbox()">
+  <div class="lightbox-box">
+    <div class="lightbox-header">
+      <h3 id="lightboxTitle">Beleg</h3>
+      <div class="actions">
+        <span id="lightboxNav" style="display:none; align-items:center; gap:4px;">
+          <button class="btn btn-gray btn-sm" id="lightboxPrev" title="Vorheriger Beleg">‹</button>
+          <span id="lightboxNavLabel" style="font-size:0.8rem; color:var(--muted);"></span>
+          <button class="btn btn-gray btn-sm" id="lightboxNext" title="Nächster Beleg">›</button>
+        </span>
+        <button class="btn btn-blue btn-sm" id="lightboxDownload">⬇ Herunterladen</button>
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+      </div>
+    </div>
+    <div class="lightbox-body" id="lightboxBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const SEASONS = ['2026/27','2025/26','2024/25','2023/24','2022/23'];
+  const SEASON_KEY = 'vereinsbudget_lastSeason';
+  let currentSeason = (() => {
+    const s = localStorage.getItem(SEASON_KEY);
+    return s && SEASONS.includes(s) ? s : SEASONS[0];
+  })();
+  let hasUnsavedChanges = false;
+  let lastSavedAt = null;
+  let lastLoadedFile = null;
+  let pendingAttach = { income: null, expense: null };
+  const MAX_ATTACH_BYTES = 4 * 1024 * 1024; // 4 MB pro Beleg
+
+  function storageKey(type) { return `vereinsbudget_${currentSeason}_${type}`; }
+
+  // Lokales Datum als YYYY-MM-DD. Nicht toISOString() verwenden — das liefert das
+  // UTC-Datum und springt in der deutschen Zeitzone nach Mitternacht auf den Vortag.
+  function localDateIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function load(type) {
+    try { return JSON.parse(localStorage.getItem(storageKey(type))) || []; }
+    catch { return []; }
+  }
+  function loadSeasonEntries(season, type) {
+    try { return JSON.parse(localStorage.getItem(`vereinsbudget_${season}_${type}`)) || []; }
+    catch { return []; }
+  }
+  function save(type, data) {
+    try {
+      localStorage.setItem(storageKey(type), JSON.stringify(data));
+    } catch (e) {
+      toast('❌ Browser-Speicher voll — Änderung NICHT gespeichert! Bitte Belege-Ordner verknüpfen oder eingebettete Belege entfernen.');
+      throw e;
+    }
+    markUnsaved();
+    scheduleAutoSave();
+  }
+
+  // ── Unsaved tracking ───────────────────────────────────────────────────────
+  function markUnsaved() {
+    hasUnsavedChanges = true;
+    const el = document.getElementById('cloudStatus');
+    el.className = 'cloud-status unsaved';
+    document.getElementById('cloudStatusText').textContent = 'Nicht gespeichert';
+  }
+  function markSaved() {
+    hasUnsavedChanges = false;
+    lastSavedAt = new Date();
+    const el = document.getElementById('cloudStatus');
+    el.className = 'cloud-status saved';
+    document.getElementById('cloudStatusText').textContent =
+      'Gespeichert ' + lastSavedAt.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+    updateLastSavedInfo();
+  }
+  function markAutoSaved() {
+    hasUnsavedChanges = false;
+    lastSavedAt = new Date();
+    const el = document.getElementById('cloudStatus');
+    el.className = 'cloud-status saved';
+    document.getElementById('cloudStatusText').textContent =
+      'Automatisch gespeichert ' + lastSavedAt.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+    updateLastSavedInfo();
+  }
+  function updateLastSavedInfo() {
+    const el = document.getElementById('lastSavedInfo');
+    const parts = [];
+    if (lastSavedAt) parts.push(`💾 Zuletzt als Datei gespeichert: ${lastSavedAt.toLocaleString('de-DE')}`);
+    if (lastLoadedFile) parts.push(`📂 Geladene Datei: <strong>${lastLoadedFile}</strong>`);
+    el.innerHTML = parts.length ? parts.join(' &nbsp;·&nbsp; ') : 'ℹ️ Noch keine Cloud-Datei geladen oder gespeichert in dieser Sitzung.';
+  }
+  window.addEventListener('beforeunload', e => {
+    // Mit verknüpftem Speicherort übernimmt das Autosave die Sicherung — keine Warnung nötig.
+    if (hasUnsavedChanges && !linkedFileHandle) { e.preventDefault(); e.returnValue = ''; }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && hasUnsavedChanges && linkedFileHandle) {
+      clearTimeout(autoSaveTimer);
+      saveToCloud(true);
+    }
+  });
+
+  // ── Club & Season ──────────────────────────────────────────────────────────
+  const DEFAULT_CLUB_NAME = '1. SC 1911 Heiligenstadt';
+  function loadClub() {
+    const stored = localStorage.getItem('vereinsbudgetclub');
+    const name = stored !== null ? stored : DEFAULT_CLUB_NAME;
+    if (stored === null) localStorage.setItem('vereinsbudgetclub', name);
+    document.getElementById('clubName').value = name;
+    updateClubTitle();
+  }
+  function saveClub() {
+    const name = document.getElementById('clubName').value.trim();
+    localStorage.setItem('vereinsbudgetclub', name);
+    updateClubTitle();
+    markUnsaved();
+    scheduleAutoSave();
+  }
+  function updateClubTitle() {
+    const name = document.getElementById('clubName').value.trim();
+    document.getElementById('clubTitle').textContent = name ? `${name} – Budget` : 'Vereinsbudget';
+  }
+  document.getElementById('clubName').addEventListener('input', saveClub);
+
+  // ── Benutzername (lokal pro Gerät, wird nicht mit anderen synchronisiert) ──
+  function loadUserName() {
+    document.getElementById('userName').value = localStorage.getItem('vereinsbudget_username') || '';
+  }
+  function saveUserName() {
+    localStorage.setItem('vereinsbudget_username', document.getElementById('userName').value.trim());
+  }
+  function getUserName() {
+    return document.getElementById('userName').value.trim() || 'Unbekannt';
+  }
+  document.getElementById('userName').addEventListener('input', saveUserName);
+
+  // ── Kategorien ─────────────────────────────────────────────────────────────
+  const DEFAULT_CATEGORIES = {
+    income: ['Mitgliedsbeiträge','Sponsoring','Zuschüsse / Förderung','Spielbetrieb','Veranstaltungen','Transfererlöse','Sonstiges'],
+    expense: ['Personal / Trainer','Spielbetrieb','Platz & Anlagen','Ausrüstung & Trikots','Reisekosten','Verwaltung','Marketing','Jugendarbeit','Sonstiges']
+  };
+  function catStorageKey(type) { return `vereinsbudget_categories_${type}`; }
+  function getCategories(type) {
+    try {
+      const raw = localStorage.getItem(catStorageKey(type));
+      const arr = raw ? JSON.parse(raw) : null;
+      return Array.isArray(arr) && arr.length ? arr : DEFAULT_CATEGORIES[type].slice();
+    } catch { return DEFAULT_CATEGORIES[type].slice(); }
+  }
+  function setCategories(type, arr) {
+    localStorage.setItem(catStorageKey(type), JSON.stringify(arr));
+  }
+  function renderCategorySelect(type) {
+    const sel = document.getElementById(type === 'income' ? 'incCat' : 'expCat');
+    const prev = sel.value;
+    const cats = getCategories(type);
+    sel.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    if (cats.includes(prev)) sel.value = prev;
+  }
+  function renderCatChips(type) {
+    const wrap = document.getElementById(type === 'income' ? 'incCatChips' : 'expCatChips');
+    const cats = getCategories(type);
+    wrap.innerHTML = cats.map(c => `
+      <span class="cat-chip">${escapeHtml(c)}<button title="Kategorie löschen" onclick="deleteCategory('${type}','${escapeJsAttr(c)}')">✕</button></span>
+    `).join('');
+  }
+  function toggleCatManager(type) {
+    const el = document.getElementById(type === 'income' ? 'incCatManager' : 'expCatManager');
+    el.classList.toggle('show');
+    if (el.classList.contains('show')) renderCatChips(type);
+  }
+  function addCategory(type) {
+    const inputId = type === 'income' ? 'incCatNew' : 'expCatNew';
+    const input = document.getElementById(inputId);
+    const name = input.value.trim();
+    if (!name) return toast('Bitte einen Kategorienamen eingeben.');
+    const cats = getCategories(type);
+    if (cats.some(c => c.toLowerCase() === name.toLowerCase())) {
+      input.value = '';
+      return toast('⚠️ Diese Kategorie gibt es schon.');
+    }
+    cats.push(name);
+    setCategories(type, cats);
+    input.value = '';
+    renderCategorySelect(type);
+    renderCatChips(type);
+    document.getElementById(type === 'income' ? 'incCat' : 'expCat').value = name;
+    toast(`✅ Kategorie „${name}" angelegt`);
+  }
+  function deleteCategory(type, name) {
+    const cats = getCategories(type);
+    if (cats.length <= 1) return toast('⚠️ Mindestens eine Kategorie muss bestehen bleiben.');
+    if (!confirm(`Kategorie „${name}" löschen? Bereits gespeicherte Einträge behalten ihre Kategorie-Bezeichnung weiterhin.`)) return;
+    setCategories(type, cats.filter(c => c !== name));
+    renderCategorySelect(type);
+    renderCatChips(type);
+    toast(`🗑 Kategorie „${name}" gelöscht`);
+  }
+
+  function initSeasons() {
+    const sel = document.getElementById('seasonSelect');
+    SEASONS.forEach(s => {
+      const o = document.createElement('option');
+      o.value = o.textContent = s;
+      sel.appendChild(o);
+    });
+    sel.value = currentSeason;
+    sel.addEventListener('change', () => { currentSeason = sel.value; localStorage.setItem(SEASON_KEY, currentSeason); render(); });
+  }
+
+  // ── Beleg-Auswahl (vor dem Hinzufügen) ─────────────────────────────────────
+  async function handleAttachSelect(e, type) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const nameEl  = document.getElementById(type === 'income' ? 'incFileName' : 'expFileName');
+    const clearEl = document.getElementById(type === 'income' ? 'incFileClear' : 'expFileClear');
+
+    if (linkedFolderHandle) {
+      try {
+        const att = await writeAttachmentFile(file);
+        pendingAttach[type] = att;
+        nameEl.textContent = `${file.name} (im Ordner gespeichert)`;
+        clearEl.style.display = 'inline';
+      } catch (err) {
+        toast('❌ Beleg konnte nicht im Ordner gespeichert werden: ' + err.message);
+      }
+      return;
+    }
+    if (file.size > MAX_ATTACH_BYTES) {
+      toast('⚠️ Datei zu groß (max. 4 MB pro Beleg ohne Belege-Ordner).');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => toast('❌ Beleg konnte nicht gelesen werden.');
+    reader.onload = ev => {
+      pendingAttach[type] = { name: file.name, mime: file.type || 'application/octet-stream', data: ev.target.result };
+      nameEl.textContent = file.name;
+      clearEl.style.display = 'inline';
+    };
+    reader.readAsDataURL(file);
+  }
+  function resetAttachUI(type) {
+    document.getElementById(type === 'income' ? 'incFile' : 'expFile').value = '';
+    document.getElementById(type === 'income' ? 'incFileName' : 'expFileName').textContent = 'Kein Beleg ausgewählt';
+    document.getElementById(type === 'income' ? 'incFileClear' : 'expFileClear').style.display = 'none';
+  }
+  function clearPendingAttach(type) {
+    const att = pendingAttach[type];
+    if (att && att.external) deleteAttachmentFile(att.storedAs);
+    pendingAttach[type] = null;
+    resetAttachUI(type);
+  }
+
+  // ── Entries ────────────────────────────────────────────────────────────────
+  function addEntry(type) {
+    const isInc  = type === 'income';
+    const descId = isInc ? 'incDesc'   : 'expDesc';
+    const amtId  = isInc ? 'incAmount' : 'expAmount';
+    const catId  = isInc ? 'incCat'    : 'expCat';
+    const desc   = document.getElementById(descId).value.trim();
+    const amount = parseFloat(document.getElementById(amtId).value);
+    const cat    = document.getElementById(catId).value;
+    if (!desc) return toast('Bitte eine Beschreibung eingeben.');
+    if (!amount || amount <= 0) return toast('Bitte einen gültigen Betrag eingeben.');
+
+    const entries = load(type);
+    entries.push({
+      id: Date.now(),
+      desc, amount: Math.round(amount * 100) / 100, cat,
+      date: localDateIso(),
+      attachment: pendingAttach[type] || null,
+      enteredBy: getUserName()
+    });
+    save(type, entries);
+
+    document.getElementById(descId).value = '';
+    document.getElementById(amtId).value  = '';
+    pendingAttach[type] = null;
+    resetAttachUI(type);
+    toast(isInc ? '✅ Einnahme hinzugefügt' : '✅ Ausgabe hinzugefügt');
+    render();
+  }
+  function deleteEntry(type, id) {
+    const entry = load(type).find(e => e.id === id);
+    if (!entry) return;
+    if (!confirm(`"${entry.desc}" (${fmt(entry.amount)}) wirklich löschen?`)) return;
+    const entries = load(type).filter(e => e.id !== id);
+    save(type, entries);
+    render();
+  }
+  function editEntryCategory(spanEl, type, id) {
+    const entries = load(type);
+    const entry = entries.find(x => x.id === id);
+    if (!entry) return;
+    const cats = getCategories(type);
+    const select = document.createElement('select');
+    select.className = 'cat-edit-select';
+    select.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}" ${c === entry.cat ? 'selected' : ''}>${escapeHtml(c)}</option>`).join('');
+    select.onclick = ev => ev.stopPropagation();
+    select.onchange = () => {
+      entry.cat = select.value;
+      save(type, entries);
+      render();
+      toast('✅ Kategorie geändert');
+    };
+    select.onblur = () => render();
+    spanEl.replaceWith(select);
+    select.focus();
+  }
+  // Das Passwort für "Saison leeren" wird serverseitig geprüft (Worker-Secret
+  // PW_BUDGET_LEEREN im ToolsUebersicht-Worker "landingpage") und steht nicht
+  // mehr im Quellcode. Ohne Internetverbindung ist die Aktion nicht möglich.
+  const PASSWORT_PRUEF_URL = 'https://landingpage.michel-brunner.workers.dev';
+  async function clearAll() {
+    const pw = prompt('🔒 Zum Leeren der Saison bitte Passwort eingeben:');
+    if (pw === null) return;
+    let resp;
+    try {
+      resp = await fetch(PASSWORT_PRUEF_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify-action-password', scope: 'budget-saison-leeren', password: pw })
+      });
+    } catch (_) {
+      return toast('❌ Passwortprüfung nicht möglich — keine Verbindung zum Server.');
+    }
+    if (resp.status === 403) return toast('❌ Falsches Passwort — Saison wurde nicht geleert.');
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      return toast('❌ ' + (body.error === 'Unbekannte Aktion'
+        ? 'Passwortprüfung noch nicht verfügbar — das Worker-Update (landingpage) muss erst deployed werden.'
+        : 'Passwortprüfung fehlgeschlagen: ' + (body.error || ('HTTP ' + resp.status))));
+    }
+    if (!confirm(`Alle Daten der Saison ${currentSeason} wirklich löschen?`)) return;
+    localStorage.removeItem(storageKey('income'));
+    localStorage.removeItem(storageKey('expense'));
+    markUnsaved();
+    scheduleAutoSave();
+    render();
+    toast('🗑 Saison geleert');
+  }
+
+  // ── Beleg an bestehendem Eintrag nachträglich anhängen/entfernen ──────────
+  function attachToExisting(type, id) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,.pdf';
+    input.onchange = async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      let att;
+      if (linkedFolderHandle) {
+        try { att = await writeAttachmentFile(file); }
+        catch (err) { return toast('❌ Beleg konnte nicht im Ordner gespeichert werden: ' + err.message); }
+      } else {
+        if (file.size > MAX_ATTACH_BYTES) return toast('⚠️ Datei zu groß (max. 4 MB pro Beleg ohne Belege-Ordner).');
+        try {
+          att = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error || new Error('Datei konnte nicht gelesen werden'));
+            reader.onload = ev => resolve({ name: file.name, mime: file.type || 'application/octet-stream', data: ev.target.result });
+            reader.readAsDataURL(file);
+          });
+        } catch (err) {
+          return toast('❌ Beleg konnte nicht gelesen werden: ' + err.message);
+        }
+      }
+      const entries = load(type);
+      const entry = entries.find(x => x.id === id);
+      if (!entry) return;
+      if (entry.attachment) {
+        entry.extraAttachments = entry.extraAttachments || [];
+        entry.extraAttachments.push(att);
+      } else {
+        entry.attachment = att;
+      }
+      save(type, entries);
+      render();
+      toast('📎 Beleg angehängt');
+    };
+    input.click();
+  }
+  function removeAttachment(type, id) {
+    if (!confirm('Beleg von diesem Eintrag entfernen?')) return;
+    const entries = load(type);
+    const entry = entries.find(x => x.id === id);
+    if (!entry) return;
+    if (entry.attachment && entry.attachment.external) deleteAttachmentFile(entry.attachment.storedAs);
+    (entry.extraAttachments || []).forEach(att => { if (att.external) deleteAttachmentFile(att.storedAs); });
+    entry.attachment = null;
+    entry.extraAttachments = [];
+    save(type, entries);
+    render();
+    toast('🗑 Beleg entfernt');
+  }
+  async function viewAttachment(type, id) {
+    const entry = load(type).find(x => x.id === id);
+    if (!entry || !entry.attachment) return attachToExisting(type, id);
+    const atts = [entry.attachment, ...(entry.extraAttachments || [])];
+    await openLightboxList(atts, 0);
+  }
+
+  // ── Lightbox ───────────────────────────────────────────────────────────────
+  let currentLightboxObjectUrl = null;
+  async function openLightboxList(atts, idx) {
+    const nav = document.getElementById('lightboxNav');
+    if (atts.length > 1) {
+      nav.style.display = 'inline-flex';
+      document.getElementById('lightboxNavLabel').textContent = `${idx + 1}/${atts.length}`;
+      document.getElementById('lightboxPrev').onclick = () => openLightboxList(atts, (idx - 1 + atts.length) % atts.length);
+      document.getElementById('lightboxNext').onclick = () => openLightboxList(atts, (idx + 1) % atts.length);
+    } else {
+      nav.style.display = 'none';
+    }
+    await openLightbox(atts[idx]);
+  }
+  async function openLightbox(att) {
+    document.getElementById('lightboxTitle').textContent = att.name;
+    const body = document.getElementById('lightboxBody');
+    body.innerHTML = '';
+    let url = att.data;
+    let mime = att.mime;
+
+    if (att.external) {
+      if (!linkedFolderHandle) {
+        body.innerHTML = `<p style="color:var(--muted)">⚠️ Beleg „${escapeHtml(att.name)}" liegt im verknüpften Belege-Ordner, der auf diesem Gerät noch nicht verbunden ist. Bitte oben unter „📁 Ordner festlegen" denselben Ordner verknüpfen.</p>`;
+        document.getElementById('lightboxOverlay').classList.add('show');
+        return;
+      }
+      try {
+        const file = await readAttachmentFile(att.storedAs);
+        if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
+        url = URL.createObjectURL(file);
+        currentLightboxObjectUrl = url;
+        mime = file.type || att.mime;
+      } catch (e) {
+        body.innerHTML = `<p style="color:var(--muted)">❌ Beleg konnte nicht geladen werden: ${escapeHtml(e.message)}</p>`;
+        document.getElementById('lightboxOverlay').classList.add('show');
+        return;
+      }
+    }
+
+    if (mime.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = url;
+      body.appendChild(img);
+    } else if (mime === 'application/pdf') {
+      const iframe = document.createElement('iframe');
+      iframe.src = url;
+      body.appendChild(iframe);
+    } else {
+      body.innerHTML = '<p style="color:var(--muted)">Vorschau für diesen Dateityp nicht verfügbar.</p>';
+    }
+    const dl = document.getElementById('lightboxDownload');
+    dl.onclick = () => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = att.name;
+      a.click();
+    };
+    document.getElementById('lightboxOverlay').classList.add('show');
+  }
+  function closeLightbox() {
+    document.getElementById('lightboxOverlay').classList.remove('show');
+    document.getElementById('lightboxNav').style.display = 'none';
+    if (currentLightboxObjectUrl) { URL.revokeObjectURL(currentLightboxObjectUrl); currentLightboxObjectUrl = null; }
+  }
+
+  // ── Fester Speicherort (File System Access API) ────────────────────────────
+  const FS_API_SUPPORTED = 'showSaveFilePicker' in window && 'showOpenFilePicker' in window;
+  let linkedFileHandle = null;
+
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('vereinsbudget_fs', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('handles');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSet(key, handle) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbGet(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readonly');
+      const req = tx.objectStore('handles').get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbClear(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function verifyPermission(handle, mode) {
+    const opts = { mode };
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if ((await handle.requestPermission(opts)) === 'granted') return true;
+    return false;
+  }
+
+  async function pickFileLocation() {
+    if (!FS_API_SUPPORTED) return toast('⚠️ Dein Browser unterstützt das nicht (nutze Chrome/Edge).');
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: 'vereinsbudget_daten.json',
+        types: [{ description: 'Budget-Datendatei', accept: { 'application/json': ['.json'] } }]
+      });
+      linkedFileHandle = handle;
+      await idbSet('budgetFile', handle);
+      updateLocationUI();
+      toast(`📌 Speicherort festgelegt: ${handle.name}`);
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('❌ Speicherort konnte nicht festgelegt werden.');
+    }
+  }
+  async function clearFileLocation() {
+    linkedFileHandle = null;
+    await idbClear('budgetFile');
+    updateLocationUI();
+    toast('🔓 Verknüpfung zum Speicherort entfernt.');
+  }
+  let fileNeedsReconnect = false;
+  async function restoreFileLocation() {
+    if (!FS_API_SUPPORTED) {
+      document.getElementById('locUnsupportedNote').style.display = 'block';
+      updateLocationUI();
+      return;
+    }
+    try {
+      const handle = await idbGet('budgetFile');
+      if (handle) {
+        linkedFileHandle = handle;
+        const state = await handle.queryPermission({ mode: 'readwrite' });
+        if (state === 'granted') {
+          await autoLoadFromHandle();
+        } else {
+          fileNeedsReconnect = true;
+        }
+      }
+    } catch {}
+    updateLocationUI();
+  }
+  async function reconnectFileLocation() {
+    if (!linkedFileHandle) return;
+    const ok = await verifyPermission(linkedFileHandle, 'readwrite');
+    if (!ok) return toast('❌ Zugriff wurde verweigert.');
+    fileNeedsReconnect = false;
+    updateLocationUI();
+    await autoLoadFromHandle();
+  }
+  async function autoLoadFromHandle() {
+    try {
+      const file = await linkedFileHandle.getFile();
+      const text = await file.text();
+      if (!text.trim()) return; // Datei existiert, ist aber noch leer (erstes Mal)
+      const data = JSON.parse(text);
+      applyLoadedData(data, linkedFileHandle.name);
+      toast(`☁️ Automatisch aus „${linkedFileHandle.name}" geladen.`);
+    } catch (e) {
+      toast('⚠️ Automatisches Laden fehlgeschlagen: ' + e.message);
+    }
+  }
+  let autoSaveTimer = null;
+  function scheduleAutoSave() {
+    if (!linkedFileHandle || fileNeedsReconnect) return;
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => saveToCloud(true), 1000);
+  }
+
+  // ── Belege-Ordner (Dateien statt Base64) ────────────────────────────────────
+  const DIR_API_SUPPORTED = 'showDirectoryPicker' in window;
+  let linkedFolderHandle = null;
+
+  async function pickBelegeFolder() {
+    if (!DIR_API_SUPPORTED) return toast('⚠️ Dein Browser unterstützt das nicht (nutze Chrome/Edge).');
+    try {
+      const handle = await window.showDirectoryPicker();
+      linkedFolderHandle = handle;
+      await idbSet('belegeFolder', handle);
+      updateFolderUI();
+      toast(`📁 Belege-Ordner festgelegt: ${handle.name}`);
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('❌ Ordner konnte nicht festgelegt werden.');
+    }
+  }
+  async function clearBelegeFolder() {
+    linkedFolderHandle = null;
+    await idbClear('belegeFolder');
+    updateFolderUI();
+    toast('🔓 Verknüpfung zum Belege-Ordner entfernt.');
+  }
+  async function restoreBelegeFolder() {
+    if (!DIR_API_SUPPORTED) return;
+    try {
+      const handle = await idbGet('belegeFolder');
+      if (handle) { linkedFolderHandle = handle; }
+    } catch {}
+    updateFolderUI();
+  }
+  function updateFolderUI() {
+    const bar = document.getElementById('folderBar');
+    const title = document.getElementById('folderTitle');
+    const sub = document.getElementById('folderSub');
+    const clearBtn = document.getElementById('folderClearBtn');
+    if (linkedFolderHandle) {
+      bar.classList.add('linked');
+      title.textContent = `Belege-Ordner: ${linkedFolderHandle.name}`;
+      sub.textContent = 'Neue Belege werden ab jetzt als einzelne Dateien dort abgelegt — kein Speicherlimit im Browser mehr.';
+      clearBtn.style.display = 'inline-flex';
+    } else {
+      bar.classList.remove('linked');
+      title.textContent = 'Kein Belege-Ordner festgelegt';
+      sub.innerHTML = 'Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — neue Belege werden dann als einzelne Dateien dort gespeichert, statt im begrenzten Browser-Speicher. Empfehlenswert, wenn viele Belege zusammenkommen.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\05_Nachwuchsbereich\\02_Förderung\\Tools\\sc-heiligenstadt-budget\\Belege</code>';
+      clearBtn.style.display = 'none';
+    }
+    updateMissingLinksBar();
+  }
+  function updateMissingLinksBar() {
+    const el = document.getElementById('missingLinksBar');
+    if (!el) return;
+    const items = [];
+    let reconnectCount = 0;
+    if (FS_API_SUPPORTED) {
+      if (!linkedFileHandle) items.push(['📌 Speicherort verknüpfen', 'pickFileLocation()']);
+      else if (fileNeedsReconnect) { items.push(['🔌 Speicherort verbinden', 'reconnectFileLocation()']); reconnectCount++; }
+    }
+    if (DIR_API_SUPPORTED) {
+      if (!linkedFolderHandle) items.push(['📁 Belege-Ordner verknüpfen', 'pickBelegeFolder()']);
+      if (!eingangFolderHandle) items.push(['📥 Eingangs-Ordner verknüpfen', 'pickEingangFolder()']);
+      else if (eingangNeedsReconnect) { items.push(['🔌 Eingangs-Ordner verbinden', 'reconnectEingangFolder()']); reconnectCount++; }
+      if (!backupFolderHandle) items.push(['🗄️ Backup-Ordner verknüpfen', 'pickBackupFolder()']);
+      else if (backupFolderNeedsReconnect) { items.push(['🔌 Backup-Ordner verbinden', 'reconnectBackupFolder()']); reconnectCount++; }
+    }
+    let html = items.map(([label, fn]) => `<button class="btn btn-orange btn-sm" onclick="${fn}">${label}</button>`).join('');
+    if (reconnectCount > 1) {
+      html = `<button class="btn btn-orange btn-sm" onclick="reconnectAll()">🔌 Alle verbinden</button>` + html;
+    }
+    el.innerHTML = html;
+  }
+  async function reconnectAll() {
+    let failed = false;
+    if (fileNeedsReconnect) { try { await reconnectFileLocation(); } catch { failed = true; } }
+    if (eingangNeedsReconnect) { try { await reconnectEingangFolder(); } catch { failed = true; } }
+    if (backupFolderNeedsReconnect) { try { await reconnectBackupFolder(); } catch { failed = true; } }
+    if (failed) toast('⚠️ Nicht alle Verbindungen konnten wiederhergestellt werden — bitte einzeln erneut versuchen.');
+  }
+  function sanitizeFilename(name) {
+    return name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  }
+  async function writeAttachmentFile(file) {
+    const ok = await verifyPermission(linkedFolderHandle, 'readwrite');
+    if (!ok) throw new Error('Schreibrechte verweigert');
+    const dotIdx = file.name.lastIndexOf('.');
+    const ext = dotIdx >= 0 ? file.name.slice(dotIdx) : '';
+    const baseName = sanitizeFilename(dotIdx >= 0 ? file.name.slice(0, dotIdx) : file.name);
+    let uniqueName = `${baseName}${ext}`;
+    let counter = 2;
+    while (true) {
+      try {
+        await linkedFolderHandle.getFileHandle(uniqueName, { create: false });
+        uniqueName = `${baseName}_${counter}${ext}`;
+        counter++;
+      } catch { break; }
+    }
+    const fileHandle = await linkedFolderHandle.getFileHandle(uniqueName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(file);
+    await writable.close();
+    return { name: file.name, storedAs: uniqueName, mime: file.type || 'application/octet-stream', external: true };
+  }
+  async function readAttachmentFile(storedAs) {
+    const ok = await verifyPermission(linkedFolderHandle, 'read');
+    if (!ok) throw new Error('Leserechte verweigert');
+    const fileHandle = await linkedFolderHandle.getFileHandle(storedAs);
+    return await fileHandle.getFile();
+  }
+  async function deleteAttachmentFile(storedAs) {
+    try {
+      const ok = await verifyPermission(linkedFolderHandle, 'readwrite');
+      if (!ok) return;
+      await linkedFolderHandle.removeEntry(storedAs);
+    } catch {}
+  }
+  function updateLocationUI() {
+    const bar = document.getElementById('locationBar');
+    const title = document.getElementById('locTitle');
+    const sub = document.getElementById('locSub');
+    const clearBtn = document.getElementById('locClearBtn');
+    const reconnectBtn = document.getElementById('locReconnectBtn');
+    reconnectBtn.style.display = (linkedFileHandle && fileNeedsReconnect) ? 'inline-flex' : 'none';
+    if (linkedFileHandle) {
+      bar.classList.add('linked');
+      title.textContent = `Verknüpft mit: ${linkedFileHandle.name}`;
+      sub.textContent = fileNeedsReconnect
+        ? 'Verknüpfung gefunden — bitte einmal auf „Verbinden & laden" klicken, um Zugriff zu bestätigen.'
+        : 'Automatisches Speichern & Laden aktiv — Änderungen werden direkt in dieser Datei gesichert, kein Klick nötig.';
+      clearBtn.style.display = 'inline-flex';
+      document.getElementById('saveActionTitle').textContent = 'Automatisch synchronisiert';
+      document.getElementById('saveActionDesc').innerHTML = `Jede Änderung wird automatisch in <code>${linkedFileHandle.name}</code> gespeichert. Dieser Button erzwingt eine sofortige Speicherung.`;
+      document.getElementById('saveActionSteps').style.display = 'none';
+      document.getElementById('saveActionBtn').textContent = '💾 Jetzt manuell speichern';
+      document.getElementById('loadActionTitle').textContent = 'Automatisch geladen';
+      document.getElementById('loadActionDesc').innerHTML = `Beim Öffnen wird automatisch aus <code>${linkedFileHandle.name}</code> geladen. Dieser Button erzwingt ein erneutes Laden.`;
+      document.getElementById('loadActionSteps').style.display = 'none';
+      document.getElementById('loadActionBtn').textContent = '🔄 Jetzt manuell laden';
+    } else {
+      bar.classList.remove('linked');
+      title.textContent = 'Kein fester Speicherort festgelegt';
+      sub.innerHTML = 'Lege einmal eine Datei fest (z. B. auf deinem gemappten Storage-Share-Laufwerk) — danach speichert/lädt der Button direkt dorthin, ohne Dialog.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\05_Nachwuchsbereich\\02_Förderung\\Tools\\sc-heiligenstadt-budget\\vereinsbudget_daten.json</code>';
+      clearBtn.style.display = 'none';
+      document.getElementById('saveActionTitle').textContent = 'In Cloud speichern';
+      document.getElementById('saveActionDesc').innerHTML = 'Erzeugt eine <code>daten.json</code> mit allen Daten <strong>und Belegen</strong> zum Herunterladen.';
+      document.getElementById('saveActionSteps').style.display = 'flex';
+      document.getElementById('saveActionBtn').textContent = '💾 Jetzt speichern';
+      document.getElementById('loadActionTitle').textContent = 'Aus Cloud laden';
+      document.getElementById('loadActionDesc').innerHTML = 'Lade die <code>daten.json</code> vom Storage Share herunter und importiere sie hier.';
+      document.getElementById('loadActionSteps').style.display = 'flex';
+      document.getElementById('loadActionBtn').textContent = '📂 Datei auswählen';
+    }
+    updateMissingLinksBar();
+  }
+
+  // ── Cloud: Speichern ───────────────────────────────────────────────────────
+  function buildExportData() {
+    const incomes  = load('income');
+    const expenses = load('expense');
+    // ALLE Saisons mitsichern: Die Datei enthielt früher nur die aktuelle Saison —
+    // ein Saisonwechsel überschrieb damit die Cloud-Kopie aller anderen Saisons,
+    // die dann nur noch im Browser-Speicher eines einzelnen Geräts existierten.
+    const seasons = {};
+    let anySeasonEntries = false;
+    SEASONS.forEach((s) => {
+      const inc = loadSeasonEntries(s, 'income');
+      const exp = loadSeasonEntries(s, 'expense');
+      if (inc.length || exp.length) {
+        seasons[s] = { income: inc, expense: exp };
+        anySeasonEntries = true;
+      }
+    });
+    return {
+      data: {
+        club: document.getElementById('clubName').value.trim(),
+        season: currentSeason,
+        // Aktuelle Saison zusätzlich flach — ältere Seitenversionen lesen die Datei so weiter.
+        income: incomes,
+        expense: expenses,
+        seasons,
+        categories: { income: getCategories('income'), expense: getCategories('expense') },
+        savedAt: new Date().toISOString(),
+        version: 4
+      },
+      hasEntries: anySeasonEntries || incomes.length || expenses.length
+    };
+  }
+  async function saveToCloud(silent = false) {
+    const { data, hasEntries } = buildExportData();
+    if (!hasEntries) return silent ? null : toast('⚠️ Keine Daten vorhanden — erst Einnahmen oder Ausgaben eintragen.');
+    const json = JSON.stringify(data, null, 2);
+
+    if (linkedFileHandle) {
+      try {
+        const ok = await verifyPermission(linkedFileHandle, 'readwrite');
+        if (!ok) { fileNeedsReconnect = true; updateLocationUI(); return silent ? null : toast('❌ Schreibrechte für die Datei wurden verweigert.'); }
+        const writable = await linkedFileHandle.createWritable();
+        await writable.write(json);
+        await writable.close();
+        if (silent) { markAutoSaved(); }
+        else { markSaved(); toast(`💾 Direkt in „${linkedFileHandle.name}" gespeichert.`); }
+      } catch (e) {
+        if (!silent) toast('❌ Speichern fehlgeschlagen: ' + e.message);
+      }
+      return;
+    }
+
+    if (silent) return; // ohne verknüpfte Datei kein automatischer Download
+    const filename = `vereinsbudget_${currentSeason.replace('/','-')}_${localDateIso()}.json`;
+    download(filename, 'application/json', json);
+    markSaved();
+    toast(`💾 Datei „${filename}" heruntergeladen — jetzt auf den Storage Share hochladen!`);
+  }
+
+  // ── Cloud: Laden ───────────────────────────────────────────────────────────
+  function applyLoadedData(data, sourceName) {
+    if (!data.income || !data.expense) throw new Error('Ungültiges Format');
+    if (data.season && SEASONS.includes(data.season)) {
+      currentSeason = data.season;
+      localStorage.setItem(SEASON_KEY, currentSeason);
+      document.getElementById('seasonSelect').value = data.season;
+    }
+    localStorage.setItem(storageKey('income'),  JSON.stringify(data.income));
+    localStorage.setItem(storageKey('expense'), JSON.stringify(data.expense));
+    // v4-Dateien: alle enthaltenen Saisons übernehmen. Saisons, die die Datei
+    // nicht enthält, bleiben lokal unangetastet (kein versehentliches Leeren).
+    if (data.seasons && typeof data.seasons === 'object') {
+      SEASONS.forEach((s) => {
+        const sd = data.seasons[s];
+        if (sd && Array.isArray(sd.income) && Array.isArray(sd.expense)) {
+          localStorage.setItem(`vereinsbudget_${s}_income`, JSON.stringify(sd.income));
+          localStorage.setItem(`vereinsbudget_${s}_expense`, JSON.stringify(sd.expense));
+        }
+      });
+    }
+    // Eigene Kategorien mitsynchronisieren (waren früher nur lokal pro Gerät).
+    if (data.categories) {
+      if (Array.isArray(data.categories.income) && data.categories.income.length) setCategories('income', data.categories.income);
+      if (Array.isArray(data.categories.expense) && data.categories.expense.length) setCategories('expense', data.categories.expense);
+      renderCategorySelect('income');
+      renderCategorySelect('expense');
+    }
+    if (data.club) {
+      localStorage.setItem('vereinsbudgetclub', data.club);
+      document.getElementById('clubName').value = data.club;
+      updateClubTitle();
+    }
+    hasUnsavedChanges = false;
+    lastSavedAt = data.savedAt ? new Date(data.savedAt) : null;
+    const el = document.getElementById('cloudStatus');
+    el.className = 'cloud-status saved';
+    document.getElementById('cloudStatusText').textContent = 'Aus Cloud geladen';
+    lastLoadedFile = sourceName;
+    updateLastSavedInfo();
+    render();
+    toast(`✅ Daten aus „${sourceName}" geladen — ${data.income.length} Einnahmen, ${data.expense.length} Ausgaben`);
+  }
+  async function loadFromCloud() {
+    if (linkedFileHandle) {
+      try {
+        const ok = await verifyPermission(linkedFileHandle, 'read');
+        if (!ok) return toast('❌ Leserechte für die Datei wurden verweigert.');
+        const file = await linkedFileHandle.getFile();
+        const text = await file.text();
+        const data = JSON.parse(text);
+        applyLoadedData(data, linkedFileHandle.name);
+      } catch (e) {
+        toast('❌ Datei konnte nicht gelesen werden: ' + e.message);
+      }
+      return;
+    }
+    document.getElementById('cloudFile').click();
+  }
+  function handleCloudLoad(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        applyLoadedData(data, file.name);
+      } catch {
+        toast('❌ Datei konnte nicht gelesen werden. Ist es eine gültige daten.json?');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  // ── CSV Export ─────────────────────────────────────────────────────────────
+  function exportCSV() {
+    const incomes  = load('income');
+    const expenses = load('expense');
+    const rows = [['Typ','Kategorie','Beschreibung','Betrag (€)','Datum','Beleg','Erfasst von']];
+    incomes.forEach(e  => rows.push(['Einnahme', e.cat, e.desc, e.amount.toFixed(2), e.date, e.attachment ? e.attachment.name : '', e.enteredBy || '']));
+    expenses.forEach(e => rows.push(['Ausgabe',  e.cat, e.desc, e.amount.toFixed(2), e.date, e.attachment ? e.attachment.name : '', e.enteredBy || '']));
+    const csvCell = (c) => {
+      let s = String(c);
+      // CSV-Injection vermeiden: führende Formel-Zeichen mit ' entschärfen
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const csv = rows.map(r => r.map(csvCell).join(';')).join('\n');
+    download(`vereinsbudget_${currentSeason.replace('/','')}.csv`, 'text/csv', '﻿' + csv);
+    toast('📊 CSV exportiert — öffne sie direkt in Excel');
+  }
+  // ── Drucken / PDF mit Beleg-Option ──────────────────────────────────────────
+  function openPrintModal() {
+    document.getElementById('printModalOverlay').classList.add('show');
+  }
+  function closePrintModal() {
+    document.getElementById('printModalOverlay').classList.remove('show');
+  }
+  async function getAttachmentSrc(att, objectUrls) {
+    if (att.data) return att.data;
+    if (att.external) {
+      if (!linkedFolderHandle) return null;
+      try {
+        const file = await readAttachmentFile(att.storedAs);
+        const url = URL.createObjectURL(file);
+        objectUrls.push(url);
+        return url;
+      } catch { return null; }
+    }
+    return null;
+  }
+  function unavailableReason(att) {
+    return (att.external && !linkedFolderHandle) ? 'Belege-Ordner nicht verknüpft' : 'Datei nicht verfügbar';
+  }
+  async function executePrint(includeAttachments) {
+    closePrintModal();
+    const incomes  = load('income');
+    const expenses = load('expense');
+    const totalInc = incomes.reduce((s,e) => s + e.amount, 0);
+    const totalExp = expenses.reduce((s,e) => s + e.amount, 0);
+    const balance  = totalInc - totalExp;
+    const club = document.getElementById('clubName').value.trim() || 'Vereinsbudget';
+    const objectUrls = [];
+
+    function rowsHtml(entries) {
+      return entries.map(e => `<tr>
+        <td>${escapeHtml(e.date)}</td>
+        <td>${escapeHtml(e.cat)}</td>
+        <td>${escapeHtml(e.desc)}</td>
+        <td class="print-amount">${fmt(e.amount)}</td>
+        <td>${e.attachment ? `<span class="print-receipt-ref">📎 ${escapeHtml(e.attachment.name)}${(e.extraAttachments || []).length ? ` (+${e.extraAttachments.length})` : ''}</span>` : '–'}</td>
+        <td>${escapeHtml(e.enteredBy) || '–'}</td>
+      </tr>`).join('');
+    }
+    async function receiptPagesHtml(entries, typeLabel) {
+      let html = '';
+      for (const e of entries) {
+        if (!e.attachment) continue;
+        const atts = [e.attachment, ...(e.extraAttachments || [])];
+        for (let ai = 0; ai < atts.length; ai++) {
+          const att = atts[ai];
+          let bodyHtml;
+          if (att.mime && att.mime.startsWith('image/')) {
+            const src = await getAttachmentSrc(att, objectUrls);
+            bodyHtml = src
+              ? `<img class="print-receipt-img" src="${src}" />`
+              : `<div class="print-receipt-missing-block">⚠️ Bild konnte nicht geladen werden (${unavailableReason(att)})</div>`;
+          } else if (att.mime === 'application/pdf') {
+            const src = await getAttachmentSrc(att, objectUrls);
+            bodyHtml = src
+              ? `<embed class="print-receipt-pdf" src="${src}" type="application/pdf" />`
+              : `<div class="print-receipt-missing-block">⚠️ PDF konnte nicht geladen werden (${unavailableReason(att)})</div>`;
+          } else {
+            bodyHtml = `<div class="print-receipt-missing-block">Dieser Dateityp kann nicht angezeigt werden: ${escapeHtml(att.name)}</div>`;
+          }
+          const counter = atts.length > 1 ? ` (Beleg ${ai + 1}/${atts.length})` : '';
+          html += `<div class="print-receipt-page">
+            <div class="print-receipt-header">📎 Beleg zu „${escapeHtml(e.desc)}"${counter} — ${fmt(e.amount)} — ${e.date} (${typeLabel})</div>
+            ${bodyHtml}
+          </div>`;
+        }
+      }
+      return html;
+    }
+
+    const incRows = rowsHtml(incomes);
+    const expRows = rowsHtml(expenses);
+    let receiptsHtml = '';
+    if (includeAttachments) {
+      receiptsHtml += await receiptPagesHtml(incomes, 'Einnahme');
+      receiptsHtml += await receiptPagesHtml(expenses, 'Ausgabe');
+    }
+
+    document.getElementById('printContent').innerHTML = `
+      <h1>${club}</h1>
+      <h2>Budgetübersicht – Saison ${currentSeason}</h2>
+      <p class="print-meta">Erstellt am ${new Date().toLocaleString('de-DE')}</p>
+      <table class="print-summary">
+        <tr><td>Einnahmen gesamt</td><td>${fmt(totalInc)}</td></tr>
+        <tr><td>Ausgaben gesamt</td><td>${fmt(totalExp)}</td></tr>
+        <tr><td><strong>Saldo</strong></td><td><strong>${fmt(balance)}</strong></td></tr>
+      </table>
+      <h3>📥 Einnahmen</h3>
+      <table class="print-table">
+        <thead><tr><th>Datum</th><th>Kategorie</th><th>Beschreibung</th><th>Betrag</th><th>Beleg</th><th>Erfasst von</th></tr></thead>
+        <tbody>${incRows || '<tr><td colspan="6">Keine Einnahmen</td></tr>'}</tbody>
+      </table>
+      <h3>📤 Ausgaben</h3>
+      <table class="print-table">
+        <thead><tr><th>Datum</th><th>Kategorie</th><th>Beschreibung</th><th>Betrag</th><th>Beleg</th><th>Erfasst von</th></tr></thead>
+        <tbody>${expRows || '<tr><td colspan="6">Keine Ausgaben</td></tr>'}</tbody>
+      </table>
+      ${receiptsHtml ? `<h2 class="print-receipts-title">📎 Belegnachweise (Originalgröße)</h2>${receiptsHtml}` : ''}
+    `;
+
+    document.body.classList.add('printing-report');
+    const cleanup = () => {
+      document.body.classList.remove('printing-report');
+      objectUrls.forEach(u => URL.revokeObjectURL(u));
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(() => window.print(), 150);
+  }
+  function download(filename, type, content) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type }));
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function fmt(n) {
+    return n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function escapeJsAttr(str) {
+    return escapeHtml(String(str ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+  }
+  function render() {
+    const incomes  = load('income');
+    const expenses = load('expense');
+    const totalInc = incomes.reduce((s,e)  => s + e.amount, 0);
+    const totalExp = expenses.reduce((s,e) => s + e.amount, 0);
+    const balance  = totalInc - totalExp;
+
+    document.getElementById('kpiIncome').textContent       = fmt(totalInc);
+    document.getElementById('kpiIncomeCount').textContent  = `${incomes.length} Posten`;
+    document.getElementById('kpiExpense').textContent      = fmt(totalExp);
+    document.getElementById('kpiExpenseCount').textContent = `${expenses.length} Posten`;
+    document.getElementById('kpiBalance').textContent      = fmt(balance);
+    document.getElementById('kpiBalanceSub').textContent   = balance >= 0 ? '✅ Überschuss' : '⚠️ Defizit';
+    document.getElementById('kpiBalance').style.color      = balance >= 0 ? 'var(--green)' : 'var(--red)';
+
+    renderFilterCatOptions('income');
+    renderFilterCatOptions('expense');
+    const filteredIncomes  = filterEntries(incomes,  'income');
+    const filteredExpenses = filterEntries(expenses, 'expense');
+    renderList('incomeList',  filteredIncomes,  'income');
+    renderList('expenseList', filteredExpenses, 'expense');
+    document.getElementById('incFilterCount').textContent  = `${filteredIncomes.length} / ${incomes.length} angezeigt`;
+    document.getElementById('expFilterCount').textContent  = `${filteredExpenses.length} / ${expenses.length} angezeigt`;
+  }
+
+  // ── Eingänge von Helfern (separates Beleg-Einreichungsformular) ───────────
+  let eingangFolderHandle = null;
+  let eingangNeedsReconnect = false;
+  async function pickEingangFolder() {
+    if (!DIR_API_SUPPORTED) return toast('⚠️ Dein Browser unterstützt das nicht (nutze Chrome/Edge).');
+    try {
+      const handle = await window.showDirectoryPicker();
+      eingangFolderHandle = handle;
+      eingangNeedsReconnect = false;
+      await idbSet('eingangFolder', handle);
+      updateEingangFolderUI();
+      await renderEingaenge();
+      toast(`📁 Eingangs-Ordner festgelegt: ${handle.name}`);
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('❌ Ordner konnte nicht festgelegt werden.');
+    }
+  }
+  async function clearEingangFolder() {
+    eingangFolderHandle = null;
+    eingangNeedsReconnect = false;
+    await idbClear('eingangFolder');
+    updateEingangFolderUI();
+    await renderEingaenge();
+    toast('🔓 Verknüpfung entfernt.');
+  }
+  async function reconnectEingangFolder() {
+    if (!eingangFolderHandle) return;
+    const ok = await verifyPermission(eingangFolderHandle, 'readwrite');
+    if (!ok) return toast('❌ Zugriff verweigert.');
+    eingangNeedsReconnect = false;
+    updateEingangFolderUI();
+    await renderEingaenge();
+  }
+  async function restoreEingangFolder() {
+    if (!DIR_API_SUPPORTED) return;
+    try {
+      const handle = await idbGet('eingangFolder');
+      if (handle) {
+        eingangFolderHandle = handle;
+        const state = await handle.queryPermission({ mode: 'readwrite' });
+        eingangNeedsReconnect = state !== 'granted';
+      }
+    } catch {}
+    updateEingangFolderUI();
+    if (eingangFolderHandle && !eingangNeedsReconnect) await renderEingaenge();
+  }
+  function updateEingangFolderUI() {
+    const bar = document.getElementById('eingangFolderBar');
+    const title = document.getElementById('eingangFolderTitle');
+    const sub = document.getElementById('eingangFolderSub');
+    const clearBtn = document.getElementById('eingangFolderClearBtn');
+    const reconnectBtn = document.getElementById('eingangFolderReconnectBtn');
+    reconnectBtn.style.display = (eingangFolderHandle && eingangNeedsReconnect) ? 'inline-flex' : 'none';
+    if (eingangFolderHandle) {
+      bar.classList.add('linked');
+      title.textContent = `Verknüpft: ${eingangFolderHandle.name}`;
+      sub.textContent = eingangNeedsReconnect ? 'Bitte „Verbinden" klicken, um Zugriff zu bestätigen.' : 'Eingänge werden hier angezeigt.';
+      clearBtn.style.display = 'inline-flex';
+    } else {
+      bar.classList.remove('linked');
+      title.textContent = 'Kein Eingangs-Ordner festgelegt';
+      sub.innerHTML = 'Verknüpfe denselben Ordner, den Helfer im Beleg-Einreichungsformular ausgewählt haben.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\02_Geschäftsstelle\\Belege_aus_Belegtool</code>';
+      clearBtn.style.display = 'none';
+    }
+    updateMissingLinksBar();
+  }
+
+  // ── Backup-Ordner ────────────────────────────────────────────────────────────
+  let backupFolderHandle = null;
+  let backupFolderNeedsReconnect = false;
+  async function pickBackupFolder() {
+    if (!DIR_API_SUPPORTED) return toast('⚠️ Dein Browser unterstützt das nicht (nutze Chrome/Edge).');
+    try {
+      const handle = await window.showDirectoryPicker();
+      backupFolderHandle = handle;
+      backupFolderNeedsReconnect = false;
+      await idbSet('backupFolder', handle);
+      updateBackupFolderUI();
+      toast(`📁 Backup-Ordner festgelegt: ${handle.name}`);
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('❌ Ordner konnte nicht festgelegt werden.');
+    }
+  }
+  async function clearBackupFolder() {
+    backupFolderHandle = null;
+    backupFolderNeedsReconnect = false;
+    await idbClear('backupFolder');
+    updateBackupFolderUI();
+    toast('🔓 Verknüpfung zum Backup-Ordner entfernt.');
+  }
+  async function reconnectBackupFolder() {
+    if (!backupFolderHandle) return;
+    const ok = await verifyPermission(backupFolderHandle, 'readwrite');
+    if (!ok) return toast('❌ Zugriff verweigert.');
+    backupFolderNeedsReconnect = false;
+    updateBackupFolderUI();
+  }
+  async function restoreBackupFolder() {
+    if (!DIR_API_SUPPORTED) return;
+    try {
+      const handle = await idbGet('backupFolder');
+      if (handle) {
+        backupFolderHandle = handle;
+        const state = await handle.queryPermission({ mode: 'readwrite' });
+        backupFolderNeedsReconnect = state !== 'granted';
+      }
+    } catch {}
+    updateBackupFolderUI();
+  }
+  function updateBackupFolderUI() {
+    const bar = document.getElementById('backupFolderBar');
+    const title = document.getElementById('backupFolderTitle');
+    const sub = document.getElementById('backupFolderSub');
+    const clearBtn = document.getElementById('backupFolderClearBtn');
+    const reconnectBtn = document.getElementById('backupFolderReconnectBtn');
+    if (!bar) return;
+    reconnectBtn.style.display = (backupFolderHandle && backupFolderNeedsReconnect) ? 'inline-flex' : 'none';
+    if (backupFolderHandle) {
+      bar.classList.add('linked');
+      title.textContent = `Verknüpft: ${backupFolderHandle.name}`;
+      sub.textContent = backupFolderNeedsReconnect ? 'Bitte „Verbinden" klicken, um Zugriff zu bestätigen.' : 'Bei jedem Start wird hier zusätzlich eine datierte Backup-Datei abgelegt.';
+      clearBtn.style.display = 'inline-flex';
+    } else {
+      bar.classList.remove('linked');
+      title.textContent = 'Kein Backup-Ordner festgelegt';
+      sub.innerHTML = 'Lege einen Ordner fest (z. B. auf dem Storage-Share-Laufwerk) — bei jedem Start wird dort zusätzlich eine datierte Backup-Datei abgelegt.<br>Empfohlener Ort: <code>C:\\Users\\Michel Brunner\\Nextcloud\\05_Nachwuchsbereich\\02_Förderung\\Tools\\sc-heiligenstadt-budget\\Backup</code>';
+      clearBtn.style.display = 'none';
+    }
+    updateMissingLinksBar();
+  }
+  async function writeBackupToFolder(date, data) {
+    if (!backupFolderHandle || backupFolderNeedsReconnect) return;
+    try {
+      const ok = await verifyPermission(backupFolderHandle, 'readwrite');
+      if (!ok) { backupFolderNeedsReconnect = true; updateBackupFolderUI(); return; }
+      const stamp = date.toISOString().slice(0,19).replace(/[:T]/g, '-');
+      const fh = await backupFolderHandle.getFileHandle(`vereinsbudget_backup_${stamp}.json`, { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(JSON.stringify(data, null, 2));
+      await writable.close();
+      await pruneBackupFolder();
+    } catch (e) {
+      toast('⚠️ Backup im Ordner konnte nicht gespeichert werden: ' + e.message);
+    }
+  }
+  async function pruneBackupFolder() {
+    if (!backupFolderHandle || !backupFolderHandle.values) return;
+    const names = [];
+    for await (const [name, handle] of backupFolderHandle.entries()) {
+      if (handle.kind === 'file' && /^vereinsbudget_backup_.*\.json$/.test(name)) names.push(name);
+    }
+    names.sort();
+    const excess = names.length - MAX_BACKUPS;
+    for (let i = 0; i < excess; i++) {
+      try { await backupFolderHandle.removeEntry(names[i]); } catch {}
+    }
+  }
+  async function scanEingangDir(dirHandle) {
+    const allNames = [];
+    for await (const [name, handle] of dirHandle.entries()) {
+      if (handle.kind === 'file') allNames.push(name);
+    }
+    const queue = [];
+    for (const metaName of allNames.filter(n => n.endsWith('.meta.json'))) {
+      try {
+        const fh = await dirHandle.getFileHandle(metaName);
+        const file = await fh.getFile();
+        const meta = JSON.parse(await file.text());
+        const base = metaName.slice(0, -'.meta.json'.length);
+        let files = Array.isArray(meta.files) ? meta.files : null;
+        if (!files) {
+          const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
+          if (!fileName) continue;
+          files = [{ fileName, fileOrigName: meta.fileOrigName, fileMime: meta.fileMime }];
+        }
+        queue.push({ id: metaName, fileName: files[0].fileName, files, ...meta, _dir: dirHandle });
+      } catch {}
+    }
+    return queue;
+  }
+  async function loadEingaenge() {
+    if (!eingangFolderHandle) return [];
+    try {
+      const ok = await verifyPermission(eingangFolderHandle, 'read');
+      if (!ok) return [];
+      let queue = await scanEingangDir(eingangFolderHandle);
+      try {
+        const erledigtDir = await eingangFolderHandle.getDirectoryHandle('Erledigt', { create: false });
+        queue = queue.concat(await scanEingangDir(erledigtDir));
+      } catch {}
+      queue.sort((a, b) => (a.submittedAt || '').localeCompare(b.submittedAt || ''));
+      return queue;
+    } catch { return []; }
+  }
+  async function renderEingaenge() {
+    const list = document.getElementById('eingangList');
+    if (!eingangFolderHandle) { list.innerHTML = '<div class="empty">Kein Eingangs-Ordner verknüpft</div>'; return; }
+    if (eingangNeedsReconnect) { list.innerHTML = '<div class="empty">Bitte oben erst „Verbinden" klicken</div>'; return; }
+    const queue = await loadEingaenge();
+    if (!queue.length) { list.innerHTML = '<div class="empty">Keine offenen Eingänge</div>'; return; }
+    list.innerHTML = queue.slice().reverse().map(s => `
+      <div class="wish-item" style="flex-wrap:wrap;">
+        <div class="wish-text" style="flex:1 1 100%;">
+          <strong>${escapeHtml(s.desc)}</strong>${s.amount ? ' — ' + fmt(s.amount) : ''}
+          <div class="wish-meta">${escapeHtml(s.date || '')} · von ${escapeHtml(s.name)}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
+          ${s.reviewedByGS ? `<div class="wish-meta" style="color:var(--green); font-weight:600;">✅ Geprüft${s._dir && s._dir.name === 'Erledigt' ? ' & abgelegt' : ''} von Geschäftsstelle${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
+        </div>
+        <select class="cat-edit-select" id="eingangType_${s.id}" onchange="updateEingangCatOptions('${s.id}')">
+          <option value="expense">Ausgabe</option>
+          <option value="income">Einnahme</option>
+        </select>
+        <select class="cat-edit-select" id="eingangCat_${s.id}"></select>
+        ${(s.files || []).map((f, i) => `<button title="${escapeHtml(f.fileOrigName || 'Beleg ansehen')}" onclick="viewEingangBeleg('${s.id}', ${i})">📎${s.files.length > 1 ? (i + 1) : ''}</button>`).join('')}
+        <button title="Übernehmen" onclick="convertEingang('${s.id}')" style="color:var(--green)">✅</button>
+        <button title="Verwerfen" onclick="dismissEingang('${s.id}')">✕</button>
+      </div>
+    `).join('');
+    queue.forEach(s => updateEingangCatOptions(s.id));
+  }
+  function updateEingangCatOptions(id) {
+    const typeSel = document.getElementById(`eingangType_${id}`);
+    const catSel = document.getElementById(`eingangCat_${id}`);
+    if (!typeSel || !catSel) return;
+    const type = typeSel.value;
+    const cats = getCategories(type);
+    const prev = catSel.value;
+    catSel.innerHTML = cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    catSel.value = cats.includes(prev) ? prev : defaultCategoryFor(type);
+  }
+  async function viewEingangBeleg(id, idx) {
+    const queue = await loadEingaenge();
+    const sub = queue.find(s => s.id === id);
+    if (!sub || !eingangFolderHandle) return;
+    const f = (sub.files || [])[idx || 0];
+    if (!f) return;
+    try {
+      const ok = await verifyPermission(eingangFolderHandle, 'read');
+      if (!ok) return toast('❌ Leserechte verweigert.');
+      const fh = await (sub._dir || eingangFolderHandle).getFileHandle(f.fileName);
+      const file = await fh.getFile();
+      if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
+      const url = URL.createObjectURL(file);
+      currentLightboxObjectUrl = url;
+      document.getElementById('lightboxNav').style.display = 'none';
+      document.getElementById('lightboxTitle').textContent = f.fileOrigName;
+      const body = document.getElementById('lightboxBody');
+      body.innerHTML = '';
+      const mime = file.type || f.fileMime;
+      if (mime.startsWith('image/')) {
+        const img = document.createElement('img'); img.src = url; body.appendChild(img);
+      } else if (mime === 'application/pdf') {
+        const iframe = document.createElement('iframe'); iframe.src = url; body.appendChild(iframe);
+      } else {
+        body.innerHTML = '<p style="color:var(--muted)">Vorschau nicht verfügbar.</p>';
+      }
+      document.getElementById('lightboxDownload').onclick = () => {
+        const a = document.createElement('a'); a.href = url; a.download = f.fileOrigName; a.click();
+      };
+      document.getElementById('lightboxOverlay').classList.add('show');
+    } catch (e) {
+      toast('❌ Beleg konnte nicht geladen werden: ' + e.message);
+    }
+  }
+  function defaultCategoryFor(type) {
+    const cats = getCategories(type);
+    return cats.includes('Sonstiges') ? 'Sonstiges' : cats[0];
+  }
+  async function removeEingangFiles(sub) {
+    const dir = sub._dir || eingangFolderHandle;
+    let ok = true;
+    for (const f of (sub.files || [])) {
+      try { await dir.removeEntry(f.fileName); } catch (e) { ok = false; }
+    }
+    try { await dir.removeEntry(sub.id); } catch (e) { ok = false; }
+    return ok;
+  }
+  async function convertEingang(id) {
+    const typeSel = document.getElementById(`eingangType_${id}`);
+    const catSel = document.getElementById(`eingangCat_${id}`);
+    const type = typeSel ? typeSel.value : 'expense';
+    const cat = catSel && catSel.value ? catSel.value : defaultCategoryFor(type);
+    const queue = await loadEingaenge();
+    const sub = queue.find(s => s.id === id);
+    if (!sub) return;
+    if (!confirm(`„${sub.desc}" von ${sub.name} als ${type === 'income' ? 'Einnahme' : 'Ausgabe'} (Kategorie: ${cat}) übernehmen?`)) return;
+
+    let attachment = null;
+    const extraAttachments = [];
+    const bereitsKopiert = []; // im Belege-Ordner schon angelegte Dateien (Aufräumen bei Abbruch)
+    try {
+      const ok = await verifyPermission(eingangFolderHandle, 'read');
+      if (!ok) throw new Error('Leserechte für den Eingangs-Ordner verweigert');
+      const dir = sub._dir || eingangFolderHandle;
+      for (const f of (sub.files || [])) {
+        const fh = await dir.getFileHandle(f.fileName);
+        const file = await fh.getFile();
+        let att;
+        if (linkedFolderHandle) {
+          att = await writeAttachmentFile(file);
+          bereitsKopiert.push(att);
+        } else {
+          if (file.size > MAX_ATTACH_BYTES) {
+            throw new Error(`"${f.fileOrigName || f.fileName}" ist zu groß für den Browser-Speicher (max. 4 MB) — bitte zuerst einen Belege-Ordner verknüpfen`);
+          }
+          att = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error || new Error('Datei konnte nicht gelesen werden'));
+            reader.onload = ev => resolve({ name: f.fileOrigName, mime: file.type || f.fileMime, data: ev.target.result });
+            reader.readAsDataURL(file);
+          });
+        }
+        if (!attachment) attachment = att; else extraAttachments.push(att);
+      }
+    } catch (e) {
+      // Übernahme ABBRECHEN: Vorher wurde der Eintrag trotzdem angelegt und die
+      // Original-Dateien aus dem Eingangs-Ordner gelöscht — der Beleg (Buchhaltungs-
+      // unterlage!) war damit unwiederbringlich weg. Eingang bleibt jetzt unverändert.
+      for (const att of bereitsKopiert) { await deleteAttachmentFile(att.storedAs); }
+      toast('❌ Übernahme abgebrochen — Beleg konnte nicht kopiert werden: ' + e.message);
+      return;
+    }
+
+    const entries = load(type);
+    entries.push({
+      id: Date.now(),
+      desc: sub.desc,
+      amount: Math.round((sub.amount || 0) * 100) / 100,
+      cat,
+      date: sub.date,
+      attachment,
+      extraAttachments,
+      enteredBy: sub.name
+    });
+    save(type, entries);
+
+    const deleted = await removeEingangFiles(sub);
+
+    render();
+    renderEingaenge();
+    if (deleted) {
+      toast(`✅ Übernommen als ${type === 'income' ? 'Einnahme' : 'Ausgabe'} — Kategorie kann in der Liste angepasst werden`);
+    } else {
+      toast('⚠️ Übernommen, aber Beleg-Dateien im Eingangs-Ordner konnten nicht gelöscht werden — Ordner neu verknüpfen und Datei manuell löschen.');
+    }
+  }
+  function dismissEingang(id) {
+    if (!confirm('Diesen Eingang verwerfen (ohne zu übernehmen)?')) return;
+    (async () => {
+      const queue = await loadEingaenge();
+      const sub = queue.find(s => s.id === id);
+      let deleted = true;
+      if (sub) deleted = await removeEingangFiles(sub);
+      renderEingaenge();
+      toast(deleted ? '🗑 Eingang verworfen' : '⚠️ Verworfen, aber Datei im Eingangs-Ordner konnte nicht gelöscht werden — Ordner neu verknüpfen.');
+    })();
+  }
+  // ── Versionsinfo ─────────────────────────────────────────────────────────
+  const APP_VERSION = '1.0';
+  const CHANGELOG = [
+    'Einnahmen & Ausgaben mit Kategorien, frei anlegbar und löschbar',
+    'Dashboard mit Einnahmen-, Ausgaben- und Saldo-Übersicht',
+    'Mehrere Saisons: Datendatei und Backups enthalten alle Saisons und die eigenen Kategorien — ein Saisonwechsel überschreibt die Cloud-Kopie der anderen Saisons nicht',
+    'Belege (Bilder/PDF) je Eintrag anhängen, ansehen und löschen — optional in eigenem Ordner statt im Browser-Speicher',
+    'Fester Speicherort für die Datendatei mit automatischem Speichern & Laden (Hetzner Storage Share)',
+    'CSV-Export, Drucken/PDF inkl. Belegnachweisen als eigene Seiten',
+    'Nachträgliches Ändern der Kategorie bestehender Einträge',
+    'Aufklappbare Gruppen für Einnahmen/Ausgaben, Kategorien-Übersicht und Cloud-Bereich',
+    '„Erfasst von"-Kennzeichnung pro Eintrag; Sicherheitsabfrage beim Löschen einzelner Buchungen',
+    'Passwortschutz für „Saison leeren" — das Passwort wird serverseitig geprüft und steht nicht im öffentlichen Quellcode',
+    'Automatische lokale Backups (letzte 5) sowie optionales Backup in einem verknüpften Ordner',
+    'Separates, mobil-fähiges Beleg-Einreichungsformular (beleg-eingang.html) für Helfer ohne Budget-Zugriff — Upload per Foto/PDF über Cloudflare-Worker-Proxy mit serverseitig geprüftem Zugriffscode, funktioniert auf jedem Gerät/Browser ohne Login',
+    'Eingehende Helfer-Belege im Hauptwerkzeug direkt aus dem Eingangs-Ordner einsehen, mit einem Klick als Einnahme/Ausgabe übernehmen (inkl. Kategoriewahl) oder verwerfen — beide Aktionen löschen den Beleg zuverlässig aus dem Eingangs-Ordner',
+    'Übersichtliches Einstellungen-Panel: Ordner-Verknüpfungen (Beleg-, Eingangs-, Backup-Ordner), weitere Exporte und Versionsinfo gebündelt an einem Ort',
+    'Feedback und Änderungswünsche laufen zentral über die Tools-Übersicht (Tab „Feedback & Hilfe")'
+  ];
+  function renderChangelog() {
+    document.querySelectorAll('.version-badge').forEach(el => { el.textContent = `Version ${APP_VERSION}`; });
+    document.getElementById('changelogList').innerHTML = CHANGELOG.map(c => `<li>${c}</li>`).join('');
+  }
+  // ── Automatisches Backup ─────────────────────────────────────────────────────
+  const BACKUP_KEY = 'vereinsbudget_backups';
+  const MAX_BACKUPS = 5;
+  function getBackups() {
+    try { return JSON.parse(localStorage.getItem(BACKUP_KEY)) || []; }
+    catch { return []; }
+  }
+  function setBackups(arr) {
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(arr));
+  }
+  async function performAutoBackup(manual = false) {
+    const { data, hasEntries } = buildExportData();
+    if (!hasEntries) { if (manual) toast('⚠️ Keine Daten vorhanden — nichts zu sichern.'); return; }
+    const now = new Date();
+    const backups = getBackups();
+    backups.unshift({ date: now.toISOString(), data });
+    while (backups.length > MAX_BACKUPS) backups.pop();
+    let saved = false;
+    while (backups.length && !saved) {
+      try { setBackups(backups); saved = true; }
+      catch { backups.pop(); } // ältestes Backup entfernen und erneut versuchen
+    }
+    if (!saved) toast('⚠️ Backup konnte nicht gespeichert werden — Browser-Speicher voll. Bitte alte Belege entfernen oder einen Backup-Ordner verknüpfen.');
+    renderBackupList();
+    await writeBackupToFolder(now, data);
+    if (manual) toast('🗄️ Backup erstellt' + (backupFolderHandle && !backupFolderNeedsReconnect ? ' (lokal + Ordner).' : '.'));
+  }
+  function formatBackupDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE') + ' ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+  function renderBackupList() {
+    const el = document.getElementById('backupList');
+    if (!el) return;
+    const backups = getBackups();
+    el.innerHTML = backups.length
+      ? backups.map((b, i) => `
+        <li class="backup-row">
+          <span class="backup-date">🗄️ ${formatBackupDate(b.date)}</span>
+          <span class="backup-actions">
+            <button onclick="downloadBackup(${i})" title="Herunterladen">⬇️</button>
+            <button onclick="restoreBackup(${i})" title="Wiederherstellen">♻️</button>
+            <button onclick="deleteBackup(${i})" title="Löschen">✕</button>
+          </span>
+        </li>`).join('')
+      : '<li class="empty">Noch keine Backups vorhanden</li>';
+  }
+  function downloadBackup(i) {
+    const b = getBackups()[i];
+    if (!b) return;
+    download(`vereinsbudget_backup_${b.date.slice(0,10)}.json`, 'application/json', JSON.stringify(b.data, null, 2));
+  }
+  function restoreBackup(i) {
+    const b = getBackups()[i];
+    if (!b) return;
+    if (!confirm(`Backup vom ${formatBackupDate(b.date)} wiederherstellen? Die aktuellen Daten werden dabei überschrieben.`)) return;
+    applyLoadedData(b.data, `Backup ${formatBackupDate(b.date)}`);
+  }
+  function deleteBackup(i) {
+    const backups = getBackups();
+    backups.splice(i, 1);
+    setBackups(backups);
+    renderBackupList();
+  }
+
+  let cloudPanelOpen = false;
+  function updateCloudPanelUI() {
+    document.getElementById('cloudPanelBody').classList.toggle('collapsed', !cloudPanelOpen);
+    document.getElementById('cloudPanelArrow').textContent = cloudPanelOpen ? '▾' : '▸';
+  }
+  function toggleCloudPanel() {
+    cloudPanelOpen = !cloudPanelOpen;
+    updateCloudPanelUI();
+  }
+
+  const filterPanelOpen = { income: false, expense: false };
+  function toggleFilterPanel(type) {
+    filterPanelOpen[type] = !filterPanelOpen[type];
+    document.getElementById(type === 'income' ? 'incFilterBar' : 'expFilterBar').classList.toggle('collapsed', !filterPanelOpen[type]);
+    document.getElementById(type === 'income' ? 'incFilterArrow' : 'expFilterArrow').textContent = filterPanelOpen[type] ? '▾' : '▸';
+  }
+  const listFilters = {
+    income:  { search: '', cat: '', from: '', to: '', attachOnly: false },
+    expense: { search: '', cat: '', from: '', to: '', attachOnly: false }
+  };
+  function renderFilterCatOptions(type) {
+    const sel = document.getElementById(type === 'income' ? 'incFilterCat' : 'expFilterCat');
+    const prev = sel.value;
+    const cats = getCategories(type);
+    sel.innerHTML = '<option value="">Alle</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+    if (cats.includes(prev)) sel.value = prev;
+  }
+  function applyListFilters(type) {
+    const p = (id) => type === 'income' ? 'inc' + id : 'exp' + id;
+    listFilters[type] = {
+      search:     document.getElementById(p('FilterSearch')).value.trim().toLowerCase(),
+      cat:        document.getElementById(p('FilterCat')).value,
+      from:       document.getElementById(p('FilterFrom')).value,
+      to:         document.getElementById(p('FilterTo')).value,
+      attachOnly: document.getElementById(p('FilterAttachOnly')).checked
+    };
+    render();
+  }
+  function resetListFilters(type) {
+    const p = (id) => type === 'income' ? 'inc' + id : 'exp' + id;
+    document.getElementById(p('FilterSearch')).value = '';
+    document.getElementById(p('FilterCat')).value = '';
+    document.getElementById(p('FilterFrom')).value = '';
+    document.getElementById(p('FilterTo')).value = '';
+    document.getElementById(p('FilterAttachOnly')).checked = false;
+    listFilters[type] = { search: '', cat: '', from: '', to: '', attachOnly: false };
+    render();
+  }
+  function filterEntries(entries, type) {
+    const f = listFilters[type];
+    return entries.filter(e => {
+      if (f.search && !e.desc.toLowerCase().includes(f.search) && !(e.enteredBy || '').toLowerCase().includes(f.search)) return false;
+      if (f.cat && e.cat !== f.cat) return false;
+      if (f.from && e.date < f.from) return false;
+      if (f.to && e.date > f.to) return false;
+      if (f.attachOnly && !e.attachment) return false;
+      return true;
+    });
+  }
+
+  const expandedGroups = { income: new Set(), expense: new Set() };
+  function toggleGroup(type, cat) {
+    const set = expandedGroups[type];
+    if (set.has(cat)) set.delete(cat); else set.add(cat);
+    render();
+  }
+  function entryItemHtml(e, type) {
+    const hasFile = !!e.attachment;
+    const extraCount = (e.extraAttachments || []).length;
+    const attIcon = hasFile ? (e.attachment.external ? '📁' : '📎') + (extraCount ? `+${extraCount}` : '') : '➕📎';
+    return `<li class="entry-item">
+      <span class="cat" title="Klicken zum Ändern der Kategorie" onclick="editEntryCategory(this,'${type}', ${e.id})">${escapeHtml(e.cat)}</span>
+      <span class="desc">${escapeHtml(e.desc)}<br><small style="color:var(--muted)">${escapeHtml(e.date)} · von ${escapeHtml(e.enteredBy) || 'Unbekannt'}</small></span>
+      <span class="val ${type === 'income' ? 'pos' : 'neg'}">${fmt(e.amount)}</span>
+      <button class="attach-btn ${hasFile ? 'has-file' : ''}" title="${hasFile ? 'Beleg ansehen: ' + escapeHtml(e.attachment.name) + (extraCount ? ` (+${extraCount} weitere)` : '') + (e.attachment.external ? ' (im Ordner)' : ' (eingebettet)') : 'Beleg anhängen'}" onclick="viewAttachment('${type}', ${e.id})">${attIcon}</button>
+      ${hasFile ? `<button class="icon-btn" title="Weitere Datei anhängen" onclick="attachToExisting('${type}', ${e.id})" style="font-size:0.8rem">➕📎</button>` : ''}
+      ${hasFile ? `<button class="icon-btn" title="Beleg entfernen" onclick="removeAttachment('${type}', ${e.id})" style="font-size:0.8rem">🗑📎</button>` : ''}
+      <button class="icon-btn" title="Eintrag löschen" onclick="deleteEntry('${type}', ${e.id})">✕</button>
+    </li>`;
+  }
+  function renderList(listId, entries, type) {
+    const ul = document.getElementById(listId);
+    ul.innerHTML = '';
+    if (!entries.length) {
+      const f = listFilters[type];
+      const filterActive = f.search || f.cat || f.from || f.to || f.attachOnly;
+      ul.innerHTML = filterActive
+        ? `<li class="empty">Keine Einträge passen zum Filter</li>`
+        : `<li class="empty">Noch keine ${type === 'income' ? 'Einnahmen' : 'Ausgaben'}</li>`;
+      return;
+    }
+    const groups = {};
+    entries.forEach(e => {
+      (groups[e.cat] = groups[e.cat] || []).push(e);
+    });
+    const groupList = Object.entries(groups)
+      .map(([cat, items]) => ({ cat, items, total: items.reduce((s,e) => s + e.amount, 0) }))
+      .sort((a,b) => b.total - a.total);
+
+    groupList.forEach(g => {
+      const isOpen = expandedGroups[type].has(g.cat);
+      const li = document.createElement('li');
+      li.className = 'entry-group';
+      li.innerHTML = `
+        <button class="entry-group-header" onclick="toggleGroup('${type}','${escapeJsAttr(g.cat)}')">
+          <span class="entry-group-arrow">${isOpen ? '▾' : '▸'}</span>
+          <span class="entry-group-name">${escapeHtml(g.cat)}</span>
+          <span class="entry-group-count">${g.items.length}</span>
+          <span class="entry-group-total ${type === 'income' ? 'pos' : 'neg'}">${fmt(g.total)}</span>
+        </button>
+        ${isOpen ? `<ul class="entry-group-items">${g.items.slice().reverse().map(e => entryItemHtml(e, type)).join('')}</ul>` : ''}
+      `;
+      ul.appendChild(li);
+    });
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────────────────
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  initSeasons();
+  renderCategorySelect('income');
+  renderCategorySelect('expense');
+  loadClub();
+  loadUserName();
+  renderChangelog();
+  restoreEingangFolder();
+  render();
+  restoreBackupFolder().then(() => restoreFileLocation().then(() => performAutoBackup()));
+  restoreBelegeFolder();
+  renderBackupList();
+  const hasData = load('income').length > 0 || load('expense').length > 0;
+  if (hasData) markUnsaved();
+  else {
+    document.getElementById('cloudStatus').className = 'cloud-status';
+    document.getElementById('cloudStatusText').textContent = 'Keine Daten';
+  }
+</script>
+</body>
+</html>
