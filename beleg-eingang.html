@@ -170,6 +170,7 @@
   }
 
   let pendingFiles = [];
+  let fahrtId = null; // optionale Korrelations-Id bei Deep-Link aus Fahrtenbuch, siehe Init unten
 
   function handleFileSelect(e) {
     const files = Array.from(e.target.files || []);
@@ -218,6 +219,7 @@
       form.append('date', date);
       form.append('desc', desc);
       form.append('note', note);
+      if (fahrtId) form.append('fahrtId', fahrtId);
       pendingFiles.forEach(f => form.append('files', f));
 
       const res = await fetch(WORKER_URL, { method: 'POST', body: form });
@@ -258,6 +260,19 @@
   document.getElementById('subName').addEventListener('input', e => localStorage.setItem('eingang_username', e.target.value.trim()));
   document.getElementById('subCode').value = localStorage.getItem('eingang_code') || '';
   document.getElementById('subCode').addEventListener('input', e => localStorage.setItem('eingang_code', e.target.value.trim()));
+
+  // Deep-Link-Vorbefüllung, z.B. von Fahrtenbuch aus verlinkt (?name=&date=&desc=&fahrtId=).
+  // subDate/subDesc werden oben immer frisch gesetzt (nie aus localStorage) -> Query-Werte
+  // unconditional übernehmen. subName ist oben schon aus localStorage vorbelegt (bewusst
+  // geräteweit über mehrere Einreichungen hinweg gemerkt) -> nur überschreiben, wenn der
+  // Query-Param wirklich gesetzt ist, und NICHT zurück in localStorage schreiben, sonst
+  // würde eine einzelne fremdbefüllte Fahrt den für künftige, unabhängige Einreichungen
+  // gedachten Gerätenamen überschreiben.
+  const deepLinkParams = new URLSearchParams(window.location.search);
+  if (deepLinkParams.has('name')) document.getElementById('subName').value = deepLinkParams.get('name');
+  if (deepLinkParams.has('date')) document.getElementById('subDate').value = deepLinkParams.get('date');
+  if (deepLinkParams.has('desc')) document.getElementById('subDesc').value = deepLinkParams.get('desc');
+  if (deepLinkParams.has('fahrtId')) fahrtId = deepLinkParams.get('fahrtId');
 </script>
 </body>
 </html>

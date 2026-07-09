@@ -30,6 +30,13 @@ const MAX_TOTAL_BYTES = 25 * 1024 * 1024;  // 25 MB pro Einreichung
 const ALLOWED_MIME = /^(image\/|application\/pdf$)/;
 const ALLOWED_EXT = /\.(jpe?g|png|gif|webp|heic|heif|pdf)$/i;
 
+// Optionale Korrelations-Id bei Deep-Link aus Fahrtenbuch (?fahrtId=... in
+// beleg-eingang.html). Fahrtenbuch-Trip-Ids sind UUIDs (crypto.randomUUID) - nur
+// dieses Format zulassen, bevor die Id in den Dateinamen einfliesst (Path-
+// Injection-Schutz); admin-worker.js filtert diesen Ordner spaeter per
+// Dateinamen-Suffix danach.
+const FAHRT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
@@ -100,6 +107,8 @@ export default {
       const date = (form.get('date') || '').toString().trim();
       const desc = (form.get('desc') || '').toString().trim();
       const note = (form.get('note') || '').toString().trim();
+      const rawFahrtId = (form.get('fahrtId') || '').toString().trim();
+      const fahrtId = FAHRT_ID_RE.test(rawFahrtId) ? rawFahrtId : null; // ungueltig/fehlend -> wie nicht angegeben behandeln
       const files = form.getAll('files').filter(f => typeof f !== 'string');
 
       if (!(await verifyActionPassword(env, 'budget-beleg-eingang', code))) {
@@ -129,7 +138,7 @@ export default {
       }
 
       const stamp = Date.now();
-      const baseName = `${stamp}_${sanitize(date)}_${sanitize(desc)}_${sanitize(name)}`;
+      const baseName = `${stamp}_${sanitize(date)}_${sanitize(desc)}_${sanitize(name)}${fahrtId ? '_fahrt-' + fahrtId : ''}`;
       const fileEntries = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -152,6 +161,7 @@ export default {
         fileOrigName: fileEntries[0].fileOrigName,
         fileMime: fileEntries[0].fileMime,
         submittedAt: new Date(stamp).toISOString(),
+        ...(fahrtId ? { fahrtId } : {}), // additiv, nur bei Deep-Link aus Fahrtenbuch gesetzt
       };
 
       await putToNextcloud(token, metaFileName, JSON.stringify(meta, null, 2), 'application/json');
