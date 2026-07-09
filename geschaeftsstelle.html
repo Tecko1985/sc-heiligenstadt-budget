@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>📋 Geschäftsstelle — Beleg-Eingang</title>
+<style>
+  :root {
+    --blue: #1a56a0;
+    --blue-light: #e8f0fb;
+    --green: #2d8c4e;
+    --green-light: #e8f5ed;
+    --orange: #f59e0b;
+    --orange-light: #fef3c7;
+    --gray: #f4f5f7;
+    --border: #dde1e8;
+    --text: #1e2330;
+    --muted: #6b7280;
+    --white: #ffffff;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #eef1f6; color: var(--text); min-height: 100vh; }
+  header { background: var(--blue); color: white; padding: 18px 24px; display: flex; align-items: center; justify-content: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); flex-wrap: wrap; }
+  .header-left { display: flex; align-items: center; gap: 12px; flex: 1 1 200px; }
+  .header-right { display: flex; align-items: center; flex: 1 1 200px; justify-content: flex-end; }
+  header span.icon { font-size: 1.6rem; }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
+  .header-logo { height: 40px; width: auto; display: block; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 20px; }
+  .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 18px; }
+  .card h2 { font-size: 1rem; margin-bottom: 6px; }
+  .card p.hint { font-size: 0.85rem; color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
+  .btn { border: none; border-radius: 8px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.88; }
+  .btn-blue { background: var(--blue); color: white; }
+  .btn-green { background: var(--green); color: white; }
+  .btn-gray { background: var(--border); color: var(--text); }
+  .btn-orange { background: var(--orange); color: white; }
+  .btn-red { background: #c0392b; color: white; }
+  .btn-sm { padding: 7px 12px; font-size: 0.8rem; }
+  .location-bar { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 10px; background: var(--gray); border: 1px solid var(--border); flex-wrap: wrap; }
+  .location-bar.linked { background: var(--green-light); border-color: var(--green); }
+  .loc-icon { font-size: 1.4rem; }
+  .loc-text { flex: 1; min-width: 200px; }
+  .loc-title { font-weight: 700; font-size: 0.92rem; }
+  .loc-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .loc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .unsupported-note { font-size: 0.85rem; color: var(--orange); background: var(--orange-light); border-radius: 8px; padding: 12px; margin-top: 12px; }
+  .entry { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .entry.reviewed { border-color: var(--green); background: var(--green-light); }
+  .entry-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+  .entry-desc { font-weight: 700; font-size: 0.95rem; }
+  .entry-amount { font-weight: 700; color: var(--blue); }
+  .entry-meta { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+  .entry-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .reviewed-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: var(--green); }
+  .edit-form { margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 12px; display: grid; gap: 8px; }
+  .edit-form .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .edit-form label { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+  .edit-form input, .edit-form textarea { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.88rem; font-family: inherit; width: 100%; }
+  .empty { color: var(--muted); font-size: 0.88rem; padding: 20px; text-align: center; }
+  .filter-bar { display: grid; gap: 10px; margin-bottom: 16px; padding: 14px; background: var(--gray); border-radius: 10px; border: 1px solid var(--border); }
+  .filter-bar .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .filter-bar .field-group label { font-size: 0.75rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 3px; }
+  .filter-bar input, .filter-bar select { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.88rem; font-family: inherit; width: 100%; }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; left: 24px; background: var(--text); color: white; padding: 14px 18px;
+    border-radius: 10px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    opacity: 0; transform: translateY(10px); transition: all 0.3s; z-index: 999; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .lightbox-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+  .lightbox-overlay.show { display: flex; }
+  .lightbox-box { background: white; border-radius: 12px; max-width: 90vw; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
+  .lightbox-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+  .lightbox-body { overflow: auto; padding: 10px; display: flex; align-items: center; justify-content: center; }
+  .lightbox-body img { max-width: 100%; max-height: 70vh; }
+  .lightbox-body iframe { width: 70vw; height: 70vh; border: none; }
+  .back-to-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: background 0.15s ease;
+  }
+  .back-to-dashboard:hover { background: rgba(255, 255, 255, 0.28); text-decoration: none; }
+  .version-badge { display: inline-block; background: rgba(255,255,255,0.18); color: #fff; font-size: 0.75rem; font-weight: 700; border-radius: 99px; padding: 3px 10px; margin-left: 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <span class="icon">📋</span>
+    <h1>Geschäftsstelle — Beleg-Eingang — 1. SC 1911 Heiligenstadt</h1>
+    <span class="version-badge">Version 1.0</span>
+  </div>
+  <a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
+  <div class="header-right">
+    <img class="header-logo" src="logo.png" alt="1. SC 1911 e.V. Heilbad Heiligenstadt" />
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <h2>📥 Eingangs-Ordner</h2>
+    <p class="hint">Verknüpfe denselben Ordner, in den Helfer über das Beleg-Formular einreichen (<code>beleg-eingang.html</code>). Hier kannst du eingehende Belege prüfen, korrigieren und als „geprüft" markieren. Die Budgetplanung (Salden, Kategorien-Übersicht) ist hier bewusst nicht sichtbar — das bleibt im Vereinsbudget.</p>
+    <div class="location-bar" id="folderBar">
+      <span class="loc-icon">📥</span>
+      <div class="loc-text">
+        <div class="loc-title" id="folderTitle">Kein Eingangs-Ordner verknüpft</div>
+        <div class="loc-sub" id="folderSub">Noch keine Verbindung hergestellt.</div>
+      </div>
+      <div class="loc-actions">
+        <button class="btn btn-orange btn-sm" id="reconnectBtn" style="display:none" onclick="reconnectFolder()">🔌 Verbinden</button>
+        <button class="btn btn-blue btn-sm" onclick="pickFolder()">📁 Ordner festlegen</button>
+        <button class="btn btn-gray btn-sm" id="clearBtn" style="display:none" onclick="clearFolder()">🔓 Verknüpfung lösen</button>
+        <button class="btn btn-gray btn-sm" id="refreshBtn" style="display:none" onclick="renderEntries()">🔄 Aktualisieren</button>
+      </div>
+    </div>
+    <div class="unsupported-note" id="unsupportedNote" style="display:none">
+      ⚠️ Dein Browser unterstützt das direkte Verknüpfen eines Ordners nicht (funktioniert in Chrome/Edge, nicht in Firefox/Safari).
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 Eingegangene Belege</h2>
+    <div id="entryList"><div class="empty">Bitte zuerst einen Eingangs-Ordner verknüpfen.</div></div>
+  </div>
+
+  <div class="card">
+    <h2 style="cursor:pointer;" onclick="toggleArchive()">📦 Erledigte Belege <span id="archiveToggleArrow">▸</span></h2>
+    <p class="hint">Bereits abgelegte Belege — zur Nachverfolgung, nicht mehr in der aktiven Liste.</p>
+    <div id="archiveFilterBar" class="filter-bar" style="display:none">
+      <div class="field-group">
+        <label>🔎 Suche (Beschreibung, Name, Notiz)</label>
+        <input type="text" id="archiveFilterText" oninput="renderArchive()" placeholder="z. B. Tanken" />
+      </div>
+      <div class="row2">
+        <div class="field-group">
+          <label>Von</label>
+          <input type="date" id="archiveFilterFrom" onchange="renderArchive()" />
+        </div>
+        <div class="field-group">
+          <label>Bis</label>
+          <input type="date" id="archiveFilterTo" onchange="renderArchive()" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Sortierung</label>
+        <select id="archiveSortOrder" onchange="renderArchive()">
+          <option value="desc">Neueste zuerst</option>
+          <option value="asc">Älteste zuerst</option>
+        </select>
+      </div>
+      <button class="btn btn-gray btn-sm" onclick="resetArchiveFilters()">✕ Filter zurücksetzen</button>
+    </div>
+    <div id="archiveList" style="display:none"><div class="empty">Noch nicht geladen.</div></div>
+  </div>
+</main>
+
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="if(event.target===this) closeLightbox()">
+  <div class="lightbox-box">
+    <div class="lightbox-head">
+      <strong id="lightboxTitle"></strong>
+      <button class="btn btn-gray btn-sm" onclick="closeLightbox()">✕ Schließen</button>
+    </div>
+    <div class="lightbox-body" id="lightboxBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  // ── IndexedDB-Persistenz (eigener Store, unabhängig vom Vereinsbudget) ──────
+  function idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('geschaeftsstelle_fs', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('handles');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbSet(key, handle) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').put(handle, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function idbGet(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readonly');
+      const req = tx.objectStore('handles').get(key);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function idbClear(key) {
+    const db = await idbOpen();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('handles', 'readwrite');
+      tx.objectStore('handles').delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function verifyPermission(handle, mode) {
+    const opts = { mode };
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if ((await handle.requestPermission(opts)) === 'granted') return true;
+    return false;
+  }
+
+  // ── Ordner verknüpfen ────────────────────────────────────────────────────
+  const DIR_API_SUPPORTED = 'showDirectoryPicker' in window;
+  let folderHandle = null;
+  let needsReconnect = false;
+
+  async function pickFolder() {
+    if (!DIR_API_SUPPORTED) return toast('⚠️ Dein Browser unterstützt das nicht (nutze Chrome/Edge).');
+    try {
+      const handle = await window.showDirectoryPicker();
+      folderHandle = handle;
+      needsReconnect = false;
+      await idbSet('eingangFolder', handle);
+      updateFolderUI();
+      await renderEntries();
+      toast(`📁 Ordner verknüpft: ${handle.name}`);
+    } catch (e) {
+      if (e.name !== 'AbortError') toast('❌ Ordner konnte nicht festgelegt werden.');
+    }
+  }
+  async function clearFolder() {
+    folderHandle = null;
+    needsReconnect = false;
+    await idbClear('eingangFolder');
+    updateFolderUI();
+    await renderEntries();
+    toast('🔓 Verknüpfung entfernt.');
+  }
+  async function reconnectFolder() {
+    if (!folderHandle) return;
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) return toast('❌ Zugriff wurde verweigert.');
+    needsReconnect = false;
+    updateFolderUI();
+    await renderEntries();
+  }
+  async function restoreFolder() {
+    if (!DIR_API_SUPPORTED) {
+      document.getElementById('unsupportedNote').style.display = 'block';
+      updateFolderUI();
+      return;
+    }
+    try {
+      const handle = await idbGet('eingangFolder');
+      if (handle) {
+        folderHandle = handle;
+        const state = await handle.queryPermission({ mode: 'readwrite' });
+        needsReconnect = state !== 'granted';
+      }
+    } catch {}
+    updateFolderUI();
+    if (folderHandle && !needsReconnect) await renderEntries();
+  }
+  function updateFolderUI() {
+    const bar = document.getElementById('folderBar');
+    const title = document.getElementById('folderTitle');
+    const sub = document.getElementById('folderSub');
+    const clearBtn = document.getElementById('clearBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const reconnectBtn = document.getElementById('reconnectBtn');
+    reconnectBtn.style.display = (folderHandle && needsReconnect) ? 'inline-flex' : 'none';
+    if (folderHandle) {
+      bar.classList.add('linked');
+      title.textContent = `Verknüpft: ${folderHandle.name}`;
+      sub.textContent = needsReconnect ? 'Bitte „Verbinden" klicken, um Zugriff zu bestätigen.' : 'Eingehende Belege werden unten angezeigt.';
+      clearBtn.style.display = 'inline-flex';
+      refreshBtn.style.display = needsReconnect ? 'none' : 'inline-flex';
+    } else {
+      bar.classList.remove('linked');
+      title.textContent = 'Kein Eingangs-Ordner verknüpft';
+      sub.textContent = 'Noch keine Verbindung hergestellt.';
+      clearBtn.style.display = 'none';
+      refreshBtn.style.display = 'none';
+    }
+  }
+
+  // ── Belege laden/anzeigen ────────────────────────────────────────────────
+  async function loadEntriesFrom(dirHandle) {
+    if (!dirHandle) return [];
+    try {
+      const ok = await verifyPermission(dirHandle, 'read');
+      if (!ok) return [];
+      const allNames = [];
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === 'file') allNames.push(name);
+      }
+      const queue = [];
+      for (const metaName of allNames.filter(n => n.endsWith('.meta.json'))) {
+        try {
+          const fh = await dirHandle.getFileHandle(metaName);
+          const file = await fh.getFile();
+          const meta = JSON.parse(await file.text());
+          const base = metaName.slice(0, -'.meta.json'.length);
+          let files = Array.isArray(meta.files) ? meta.files : null;
+          if (!files) {
+            const fileName = allNames.find(n => n !== metaName && (n === base || n.startsWith(base + '.')));
+            if (!fileName) continue;
+            files = [{ fileName, fileOrigName: meta.fileOrigName, fileMime: meta.fileMime }];
+          }
+          // Migration: vormals galt eine einzelne reviewedByGS-Markierung fuer
+          // die ganze Einreichung. Beim ersten Laden nach dem Update wird sie
+          // auf jede Datei uebertragen, damit bereits geprueftes nicht verloren geht.
+          files = files.map(f => ({ ...f, reviewed: typeof f.reviewed === 'boolean' ? f.reviewed : !!meta.reviewedByGS }));
+          queue.push({ id: metaName, fileName: files[0].fileName, files, ...meta });
+        } catch {}
+      }
+      queue.sort((a, b) => (a.submittedAt || '').localeCompare(b.submittedAt || ''));
+      return queue;
+    } catch { return []; }
+  }
+  async function loadEntries() {
+    return loadEntriesFrom(folderHandle);
+  }
+  async function getErledigtDir(create) {
+    if (!folderHandle) return null;
+    try { return await folderHandle.getDirectoryHandle('Erledigt', { create: !!create }); }
+    catch { return null; }
+  }
+  async function loadArchivedEntries() {
+    return loadEntriesFrom(await getErledigtDir(false));
+  }
+  let editingId = null;
+  async function renderEntries() {
+    const list = document.getElementById('entryList');
+    if (!folderHandle) { list.innerHTML = '<div class="empty">Bitte zuerst einen Eingangs-Ordner verknüpfen.</div>'; return; }
+    if (needsReconnect) { list.innerHTML = '<div class="empty">Bitte oben erst „Verbinden" klicken.</div>'; return; }
+    const queue = await loadEntries();
+    if (!queue.length) { list.innerHTML = '<div class="empty">Keine eingehenden Belege.</div>'; return; }
+    list.innerHTML = queue.slice().reverse().map(s => {
+      const files = s.files || [];
+      const allReviewed = files.length > 0 && files.every(f => f.reviewed);
+      return `
+      <div class="entry ${allReviewed ? 'reviewed' : ''}">
+        <div class="entry-top">
+          <div>
+            <div class="entry-desc">${escapeHtml(s.desc)}</div>
+            <div class="entry-meta">${escapeHtml(s.date || '')} · von ${escapeHtml(s.name || '')}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
+            ${allReviewed ? `<div class="reviewed-tag">✅ Alle Belege geprüft${s.gsNote ? ' — „' + escapeHtml(s.gsNote) + '"' : ''}</div>` : ''}
+          </div>
+          <div class="entry-amount">${s.amount ? Number(s.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 }) + ' €' : ''}</div>
+        </div>
+        <div class="entry-files">
+          ${files.map((f, i) => `
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;">
+            <button class="btn btn-gray btn-sm" onclick="viewAttachment('${s.id}', ${i})">📎 ${escapeHtml(f.fileOrigName || `Beleg ${i + 1}`)}</button>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem;">
+              <input type="checkbox" ${f.reviewed ? 'checked' : ''} onchange="setFileReviewed('${s.id}', ${i}, this.checked)" />
+              Geprüft
+            </label>
+          </div>
+          `).join('')}
+        </div>
+        <div class="entry-actions">
+          <button class="btn btn-blue btn-sm" onclick="toggleEdit('${s.id}')">✏️ Bearbeiten</button>
+          ${allReviewed ? `
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;">
+            <input type="checkbox" onchange="archiveEntry('${s.id}', this)" />
+            Erledigt
+          </label>
+          ` : ''}
+          <button class="btn btn-red btn-sm" onclick="deleteEntry('${s.id}')">🗑 Löschen</button>
+        </div>
+        ${editingId === s.id ? `
+        <div class="edit-form">
+          <div class="row2">
+            <div><label>Name</label><input type="text" id="edit_name_${s.id}" value="${escapeHtml(s.name || '')}" /></div>
+            <div><label>Betrag (€)</label><input type="number" step="0.01" id="edit_amount_${s.id}" value="${s.amount ?? ''}" /></div>
+          </div>
+          <div class="row2">
+            <div><label>Datum</label><input type="date" id="edit_date_${s.id}" value="${escapeHtml(s.date || '')}" /></div>
+            <div><label>Beschreibung</label><input type="text" id="edit_desc_${s.id}" value="${escapeHtml(s.desc || '')}" /></div>
+          </div>
+          <div><label>Notiz (Helfer)</label><textarea id="edit_note_${s.id}" rows="2">${escapeHtml(s.note || '')}</textarea></div>
+          <div><label>Interner Kommentar (Geschäftsstelle, sichtbar im Vereinsbudget)</label><textarea id="edit_gsnote_${s.id}" rows="2">${escapeHtml(s.gsNote || '')}</textarea></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-green btn-sm" onclick="saveEdit('${s.id}')">💾 Speichern</button>
+            <button class="btn btn-gray btn-sm" onclick="toggleEdit(null)">Abbrechen</button>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+    }).join('');
+  }
+  function toggleEdit(id) {
+    editingId = editingId === id ? null : id;
+    renderEntries();
+  }
+  async function writeMeta(sub, updates) {
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) { toast('❌ Schreibrechte verweigert.'); return false; }
+    const meta = {
+      name: sub.name, amount: sub.amount, date: sub.date, desc: sub.desc, note: sub.note,
+      files: sub.files, fileOrigName: sub.fileOrigName, fileMime: sub.fileMime, submittedAt: sub.submittedAt,
+      reviewedByGS: sub.reviewedByGS || false, gsNote: sub.gsNote || '',
+      ...updates,
+    };
+    try {
+      const fh = await folderHandle.getFileHandle(sub.id, { create: false });
+      const writable = await fh.createWritable();
+      await writable.write(JSON.stringify(meta, null, 2));
+      await writable.close();
+      return true;
+    } catch (e) {
+      toast('❌ Speichern fehlgeschlagen: ' + e.message);
+      return false;
+    }
+  }
+  async function saveEdit(id) {
+    const queue = await loadEntries();
+    const sub = queue.find(s => s.id === id);
+    if (!sub) return;
+    const amountVal = document.getElementById(`edit_amount_${id}`).value;
+    const updates = {
+      name: document.getElementById(`edit_name_${id}`).value.trim(),
+      amount: amountVal === '' ? 0 : parseFloat(amountVal) || 0,
+      date: document.getElementById(`edit_date_${id}`).value,
+      desc: document.getElementById(`edit_desc_${id}`).value.trim(),
+      note: document.getElementById(`edit_note_${id}`).value.trim(),
+      gsNote: document.getElementById(`edit_gsnote_${id}`).value.trim(),
+    };
+    if (!updates.desc) return toast('Bitte eine Beschreibung eingeben.');
+    const ok = await writeMeta(sub, updates);
+    if (ok) { editingId = null; toast('💾 Änderungen gespeichert.'); await renderEntries(); }
+  }
+  async function setFileReviewed(id, idx, checked) {
+    const queue = await loadEntries();
+    const sub = queue.find(s => s.id === id);
+    if (!sub) return;
+    const files = (sub.files || []).map((f, i) => i === idx ? { ...f, reviewed: checked } : f);
+    const allReviewed = files.length > 0 && files.every(f => f.reviewed);
+    const ok = await writeMeta(sub, { files, reviewedByGS: allReviewed });
+    if (ok) { toast(checked ? '✅ Datei als geprüft markiert.' : '↩️ Prüf-Markierung entfernt.'); await renderEntries(); }
+  }
+  async function archiveEntry(id, checkboxEl) {
+    if (checkboxEl && !checkboxEl.checked) return;
+    const queue = await loadEntries();
+    const sub = queue.find(s => s.id === id);
+    if (!sub) { if (checkboxEl) checkboxEl.checked = false; return; }
+    if (!confirm(`„${sub.desc}" von ${sub.name} als erledigt ablegen? Der Eintrag verschwindet dann aus dieser Liste; im Vereinsbudget bleibt er zur Übernahme verfügbar (Beleg + Daten werden in den Unterordner „Erledigt" verschoben).`)) {
+      if (checkboxEl) checkboxEl.checked = false;
+      return;
+    }
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) { toast('❌ Schreibrechte verweigert.'); if (checkboxEl) checkboxEl.checked = false; return; }
+    try {
+      const erledigtDir = await getErledigtDir(true);
+      const fileNames = (sub.files || []).map(f => f.fileName);
+      for (const fileName of [...fileNames, sub.id]) {
+        await moveFile(folderHandle, erledigtDir, fileName);
+      }
+      toast('📦 Als erledigt abgelegt.');
+      await renderEntries();
+      if (archiveOpen) await renderArchive();
+    } catch (e) {
+      toast('❌ Ablegen fehlgeschlagen: ' + e.message);
+      if (checkboxEl) checkboxEl.checked = false;
+    }
+  }
+  async function moveFile(srcDir, destDir, fileName) {
+    const srcHandle = await srcDir.getFileHandle(fileName);
+    const file = await srcHandle.getFile();
+    const destHandle = await destDir.getFileHandle(fileName, { create: true });
+    const writable = await destHandle.createWritable();
+    await writable.write(file);
+    await writable.close();
+    await srcDir.removeEntry(fileName);
+  }
+  let archiveOpen = false;
+  async function toggleArchive() {
+    archiveOpen = !archiveOpen;
+    document.getElementById('archiveList').style.display = archiveOpen ? 'block' : 'none';
+    document.getElementById('archiveFilterBar').style.display = archiveOpen ? 'grid' : 'none';
+    document.getElementById('archiveToggleArrow').textContent = archiveOpen ? '▾' : '▸';
+    if (archiveOpen) await renderArchive();
+  }
+  function resetArchiveFilters() {
+    document.getElementById('archiveFilterText').value = '';
+    document.getElementById('archiveFilterFrom').value = '';
+    document.getElementById('archiveFilterTo').value = '';
+    document.getElementById('archiveSortOrder').value = 'desc';
+    renderArchive();
+  }
+  async function renderArchive() {
+    const list = document.getElementById('archiveList');
+    if (!folderHandle) { list.innerHTML = '<div class="empty">Kein Eingangs-Ordner verknüpft.</div>'; return; }
+    let queue = await loadArchivedEntries();
+    const text = (document.getElementById('archiveFilterText')?.value || '').trim().toLowerCase();
+    const from = document.getElementById('archiveFilterFrom')?.value || '';
+    const to = document.getElementById('archiveFilterTo')?.value || '';
+    const order = document.getElementById('archiveSortOrder')?.value || 'desc';
+    if (text) {
+      queue = queue.filter(s => [s.desc, s.name, s.note, s.gsNote].some(v => (v || '').toLowerCase().includes(text)));
+    }
+    if (from) queue = queue.filter(s => (s.date || '') >= from);
+    if (to) queue = queue.filter(s => (s.date || '') <= to);
+    queue = queue.slice();
+    if (order === 'desc') queue.reverse();
+    if (!queue.length) { list.innerHTML = '<div class="empty">Keine erledigten Belege für diesen Filter.</div>'; return; }
+    list.innerHTML = queue.map(s => `
+      <div class="entry reviewed">
+        <div class="entry-top">
+          <div>
+            <div class="entry-desc">${escapeHtml(s.desc)}</div>
+            <div class="entry-meta">${escapeHtml(s.date || '')} · von ${escapeHtml(s.name || '')}${s.note ? ' · „' + escapeHtml(s.note) + '"' : ''}</div>
+            ${s.gsNote ? `<div class="reviewed-tag">„${escapeHtml(s.gsNote)}"</div>` : ''}
+          </div>
+          <div class="entry-amount">${s.amount ? Number(s.amount).toLocaleString('de-DE', { minimumFractionDigits: 2 }) + ' €' : ''}</div>
+        </div>
+        <div class="entry-actions">
+          ${(s.files || []).map((f, i) => `<button class="btn btn-gray btn-sm" onclick="viewArchivedAttachment('${s.id}', ${i})">📎 ${escapeHtml(f.fileOrigName || `Beleg ${i + 1}`)}</button>`).join('')}
+          <button class="btn btn-blue btn-sm" onclick="restoreEntry('${s.id}')">↩️ Zurückholen</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  async function restoreEntry(id) {
+    const erledigtDir = await getErledigtDir(false);
+    const queue = await loadEntriesFrom(erledigtDir);
+    const sub = queue.find(s => s.id === id);
+    if (!sub || !erledigtDir) return;
+    if (!confirm(`„${sub.desc}" von ${sub.name} wieder in die aktive Liste zurückholen?`)) return;
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) return toast('❌ Schreibrechte verweigert.');
+    try {
+      const fileNames = (sub.files || []).map(f => f.fileName);
+      for (const fileName of [...fileNames, sub.id]) {
+        await moveFile(erledigtDir, folderHandle, fileName);
+      }
+      toast('↩️ Zurückgeholt.');
+      await renderArchive();
+      await renderEntries();
+    } catch (e) {
+      toast('❌ Zurückholen fehlgeschlagen: ' + e.message);
+    }
+  }
+  async function viewArchivedAttachment(id, idx) {
+    const erledigtDir = await getErledigtDir(false);
+    const queue = await loadEntriesFrom(erledigtDir);
+    const sub = queue.find(s => s.id === id);
+    if (!sub || !erledigtDir) return;
+    const f = (sub.files || [])[idx || 0];
+    if (!f) return;
+    try {
+      const ok = await verifyPermission(erledigtDir, 'read');
+      if (!ok) return toast('❌ Leserechte verweigert.');
+      const fh = await erledigtDir.getFileHandle(f.fileName);
+      const file = await fh.getFile();
+      if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
+      const url = URL.createObjectURL(file);
+      currentLightboxObjectUrl = url;
+      document.getElementById('lightboxTitle').textContent = f.fileOrigName || f.fileName;
+      const body = document.getElementById('lightboxBody');
+      body.innerHTML = '';
+      const mime = file.type || f.fileMime || '';
+      if (mime.startsWith('image/')) {
+        const img = document.createElement('img'); img.src = url; body.appendChild(img);
+      } else if (mime === 'application/pdf') {
+        const iframe = document.createElement('iframe'); iframe.src = url; body.appendChild(iframe);
+      } else {
+        body.innerHTML = '<p>Vorschau für diesen Dateityp nicht verfügbar.</p>';
+      }
+      document.getElementById('lightboxOverlay').classList.add('show');
+    } catch (e) {
+      toast('❌ Beleg konnte nicht geladen werden: ' + e.message);
+    }
+  }
+  async function deleteEntry(id) {
+    const queue = await loadEntries();
+    const sub = queue.find(s => s.id === id);
+    if (!sub) return;
+    if (!confirm(`„${sub.desc}" von ${sub.name} unwiderruflich löschen? Dies entfernt Beleg und Daten vollständig aus dem Ordner.`)) return;
+    const ok = await verifyPermission(folderHandle, 'readwrite');
+    if (!ok) return toast('❌ Schreibrechte verweigert.');
+    for (const f of (sub.files || [])) {
+      try { await folderHandle.removeEntry(f.fileName); } catch {}
+    }
+    try { await folderHandle.removeEntry(sub.id); } catch {}
+    toast('🗑 Eintrag gelöscht.');
+    await renderEntries();
+  }
+  let currentLightboxObjectUrl = null;
+  async function viewAttachment(id, idx) {
+    const queue = await loadEntries();
+    const sub = queue.find(s => s.id === id);
+    if (!sub || !folderHandle) return;
+    const f = (sub.files || [])[idx || 0];
+    if (!f) return;
+    try {
+      const ok = await verifyPermission(folderHandle, 'read');
+      if (!ok) return toast('❌ Leserechte verweigert.');
+      const fh = await folderHandle.getFileHandle(f.fileName);
+      const file = await fh.getFile();
+      if (currentLightboxObjectUrl) URL.revokeObjectURL(currentLightboxObjectUrl);
+      const url = URL.createObjectURL(file);
+      currentLightboxObjectUrl = url;
+      document.getElementById('lightboxTitle').textContent = f.fileOrigName || f.fileName;
+      const body = document.getElementById('lightboxBody');
+      body.innerHTML = '';
+      const mime = file.type || f.fileMime || '';
+      if (mime.startsWith('image/')) {
+        const img = document.createElement('img'); img.src = url; body.appendChild(img);
+      } else if (mime === 'application/pdf') {
+        const iframe = document.createElement('iframe'); iframe.src = url; body.appendChild(iframe);
+      } else {
+        body.innerHTML = '<p>Vorschau für diesen Dateityp nicht verfügbar.</p>';
+      }
+      document.getElementById('lightboxOverlay').classList.add('show');
+    } catch (e) {
+      toast('❌ Beleg konnte nicht geladen werden: ' + e.message);
+    }
+  }
+  function closeLightbox() {
+    document.getElementById('lightboxOverlay').classList.remove('show');
+    document.getElementById('lightboxBody').innerHTML = '';
+    if (currentLightboxObjectUrl) { URL.revokeObjectURL(currentLightboxObjectUrl); currentLightboxObjectUrl = null; }
+  }
+
+  restoreFolder();
+</script>
+</body>
+</html>
