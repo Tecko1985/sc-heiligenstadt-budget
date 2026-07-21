@@ -73,6 +73,30 @@ async function verifyActionPassword(env, scope, password) {
   }
 }
 
+// Benachrichtigungsmail nach erfolgreicher Einreichung. Der Versand selbst liegt in
+// der Landingpage (Aktion "beleg-eingang-notify") - der Brevo-API-Key existiert nur
+// dort und soll nicht in einen zweiten Worker dupliziert werden. Laeuft ueber
+// dasselbe Service Binding wie die Zugriffscode-Pruefung oben; der Code geht mit,
+// weil die Aktion dort eigenstaendig prueft (die Landingpage-URL ist oeffentlich).
+//
+// Schluckt JEDEN Fehler: aufgerufen wird das erst, wenn der Beleg schon vollstaendig
+// in Nextcloud liegt. Eine nicht zugestellte Mail darf dem Helfer keine gescheiterte
+// Einreichung melden - sichtbar wird so ein Fall nur im Worker-Log.
+async function notifyBelegEingang(env, payload) {
+  try {
+    const resp = await env.LANDINGPAGE.fetch('https://landingpage/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'beleg-eingang-notify', ...payload }),
+    });
+    if (!resp.ok) {
+      console.error(`Beleg-Benachrichtigung fehlgeschlagen (HTTP ${resp.status})`);
+    }
+  } catch (e) {
+    console.error('Beleg-Benachrichtigung fehlgeschlagen:', e.message);
+  }
+}
+
 async function putToNextcloud(token, filename, body, contentType) {
   const url = `${NEXTCLOUD_BASE}/${encodeURIComponent(token)}/${encodeURIComponent(filename)}`;
   const auth = btoa(`${token}:`);
@@ -88,7 +112,7 @@ async function putToNextcloud(token, filename, body, contentType) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() });
     }
@@ -165,6 +189,19 @@ export default {
       };
 
       await putToNextcloud(token, metaFileName, JSON.stringify(meta, null, 2), 'application/json');
+
+      // Per waitUntil statt await: der Helfer steht oft im Mobilnetz vor dem
+      // Formular und soll die Bestaetigung sehen, sobald der Beleg liegt - nicht
+      // erst, wenn auch Brevo geantwortet hat.
+      ctx.waitUntil(notifyBelegEingang(env, {
+        code,
+        name,
+        desc,
+        note,
+        date,
+        amount: meta.amount, // exakt der Wert, der auch im Sidecar steht
+        fileCount: fileEntries.length,
+      }));
 
       return new Response(JSON.stringify({ ok: true }), {
         status: 200,
