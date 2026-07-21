@@ -96,6 +96,24 @@
   }
   .back-to-dashboard:hover { background: rgba(255, 255, 255, 0.28); text-decoration: none; }
   .version-badge { display: inline-block; background: rgba(255,255,255,0.18); color: #fff; font-size: 0.75rem; font-weight: 700; border-radius: 99px; padding: 3px 10px; margin-left: 8px; vertical-align: middle; }
+
+  nav {
+    display: flex; gap: 4px; background: var(--white);
+    padding: 8px 24px 0; border-bottom: 1px solid var(--border);
+  }
+  nav button {
+    background: none; border: none; padding: 10px 16px;
+    font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer;
+    border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0;
+  }
+  nav button:hover { background: var(--gray); }
+  nav button.active { color: var(--blue); border-bottom-color: var(--blue); }
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+  .version-badge-link { cursor: pointer; }
+  .version-badge-link:hover, .version-badge-link:focus-visible { background: rgba(255,255,255,0.32); }
+  .card .version-badge { background: var(--gray); color: var(--blue); }
+  .changelog-list { list-style: disc; padding-left: 20px; color: var(--muted); font-size: 0.88rem; line-height: 1.6; margin: 0; }
 </style>
 </head>
 <body>
@@ -103,7 +121,7 @@
   <div class="header-left">
     <span class="icon">📋</span>
     <h1>Geschäftsstelle — Beleg-Eingang — 1. SC 1911 Heiligenstadt</h1>
-    <span class="version-badge">Version 1.0</span>
+    <span class="version-badge version-badge-link" id="version-badge-header" role="button" tabindex="0" title="Versionshistorie ansehen">Version 1.0</span>
   </div>
   <a href="https://tecko1985.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
   <div class="header-right">
@@ -111,7 +129,13 @@
   </div>
 </header>
 
+<nav>
+  <button data-tab="eingang" class="active">Beleg-Eingang</button>
+  <button data-tab="info">Info</button>
+</nav>
+
 <main>
+ <div class="tab-section active" id="tab-eingang">
   <div class="card">
     <h2>📥 Eingangs-Ordner</h2>
     <p class="hint">Verknüpfe denselben Ordner, in den Helfer über das Beleg-Formular einreichen (<code>beleg-eingang.html</code>). Hier kannst du eingehende Belege prüfen, korrigieren und als „geprüft" markieren. Die Budgetplanung (Salden, Kategorien-Übersicht) ist hier bewusst nicht sichtbar — das bleibt im Vereinsbudget.</p>
@@ -167,6 +191,18 @@
     </div>
     <div id="archiveList" style="display:none"><div class="empty">Noch nicht geladen.</div></div>
   </div>
+ </div>
+
+ <div class="tab-section" id="tab-info">
+   <div class="card">
+     <h2>Über den Beleg-Eingang <span class="version-badge"></span></h2>
+     <p class="hint">Übersicht der von Helferinnen und Helfern eingereichten Belege. Belege ansehen, als geprüft oder erledigt markieren und löschen — ohne Einblick in die Budgetplanung des Vereins.</p>
+   </div>
+   <div class="card">
+     <h2>Änderungen</h2>
+     <ul class="changelog-list" id="changelogList"></ul>
+   </div>
+ </div>
 </main>
 
 <div class="lightbox-overlay" id="lightboxOverlay" onclick="if(event.target===this) closeLightbox()">
@@ -653,6 +689,31 @@
   }
 
   restoreFolder();
+
+  // ---------- Info-Tab / Versionshistorie ----------
+  const APP_VERSION = '1.0';
+  const CHANGELOG = [
+    'Eingereichte Belege ansehen, inklusive Foto oder PDF in Originalgröße',
+    'Belege als geprüft oder erledigt markieren',
+    'Nicht benötigte Belege löschen',
+    'Bewusst getrennt vom Vereinsbudget — kein Einblick in die Budgetplanung'
+  ];
+  function activateTab(name) {
+    document.querySelectorAll('nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
+  }
+  (function setupInfoTab() {
+    document.querySelectorAll('.version-badge').forEach(el => { el.textContent = 'Version ' + APP_VERSION; });
+    document.getElementById('changelogList').innerHTML = CHANGELOG.map(c => '<li>' + c + '</li>').join('');
+    document.querySelectorAll('nav button[data-tab]').forEach(b => {
+      b.addEventListener('click', () => activateTab(b.dataset.tab));
+    });
+    const badge = document.getElementById('version-badge-header');
+    badge.addEventListener('click', () => activateTab('info'));
+    badge.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab('info'); }
+    });
+  })();
 </script>
 </body>
 </html>
