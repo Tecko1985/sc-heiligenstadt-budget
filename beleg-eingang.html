@@ -110,6 +110,49 @@
   @media (max-width: 820px) {
     input, select, textarea { font-size: 16px !important; }
   }
+
+/* ---------------------------------------------------------------------
+   Datenschutzhinweis nach Art. 13 DSGVO
+   ---------------------------------------------------------------------
+   Bewusst aufklappbar: die Angaben muessen vollstaendig dastehen, duerfen
+   das Formular aber nicht zuschuetten. Zugeklappt ist der Standard --
+   Art. 13 verlangt, dass die Information verfuegbar ist, nicht dass sie
+   ungefragt zwei Bildschirme fuellt.
+
+   Die Farben tragen Rueckfallwerte, weil derselbe Block in mehreren Repos
+   der Flotte steht und die Variablennamen dort nicht ueberall gleich
+   heissen. Ohne den Fallback waere die Schrift in manchen Apps schwarz
+   auf weiss statt gedaempft. */
+.ds-block {
+  border: 1px solid var(--line, var(--border, #dfe3e8));
+  border-radius: 8px;
+  background: #fbfcfd;
+  margin: 14px 0 0;
+}
+.ds-block > summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--blue, #1f4e9c);
+  list-style: none;
+}
+/* Das eigene Dreieck statt des nativen Markers: Safari auf aelteren
+   iOS-Geraeten rendert list-style an <summary> nicht zuverlaessig. */
+.ds-block > summary::-webkit-details-marker { display: none; }
+.ds-block > summary::before { content: "\25B8\00A0"; }
+.ds-block[open] > summary::before { content: "\25BE\00A0"; }
+.ds-inhalt {
+  padding: 0 12px 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted, #667085);
+}
+.ds-inhalt p { margin: 0 0 8px; }
+.ds-inhalt strong { color: var(--text, #1c2330); }
+.ds-inhalt ul { margin: 0 0 8px; padding-left: 18px; }
+.ds-inhalt li { margin: 2px 0; }
+.ds-inhalt a { color: var(--blue, #1f4e9c); }
 </style>
 </head>
 <body>
@@ -169,6 +212,44 @@
       <label>Notiz (optional)</label>
       <textarea id="subNote" rows="2" placeholder="Zusätzliche Infos für den Kassierer"></textarea>
     </div>
+    <!-- Information nach Art. 13 DSGVO, direkt ueber dem Absenden-Knopf.
+         Login-lose Seite: wer hier einreicht, hat kein Vereinskonto und damit
+         keinen anderen Ort, an dem er das nachlesen koennte. -->
+    <details class="ds-block">
+      <summary>Was mit deinen Daten geschieht (Information nach Art. 13 DSGVO)</summary>
+      <div class="ds-inhalt">
+        <p><strong>Verantwortlich</strong> ist der 1. SC 1911 Heiligenstadt,
+        Leineberg 2, 37308 Heilbad Heiligenstadt, Telefon 03606 612206,
+        <a href="mailto:info@sc1911-heiligenstadt.de">info@sc1911-heiligenstadt.de</a>.</p>
+
+        <p><strong>Wozu und auf welcher Grundlage:</strong> Dein Name, der
+        Betrag, das Datum und der eingereichte Beleg dienen dazu, dir die
+        Auslage zu erstatten und den Vorgang in der Vereinsbuchhaltung zu
+        erfassen (Art. 6 Abs. 1 lit. b DSGVO). Als Buchungsbeleg unterliegt er
+        zusätzlich steuer- und handelsrechtlichen Aufzeichnungspflichten
+        (Art. 6 Abs. 1 lit. c DSGVO).</p>
+
+        <p><strong>Wer die Daten erhält:</strong> Der Kassierer und, soweit
+        nötig, der Steuerberater und das Finanzamt. Gespeichert wird auf
+        Servern in Deutschland, die ein Auftragsverarbeiter für uns betreibt.
+        Eine Weitergabe darüber hinaus findet nicht statt.</p>
+
+        <p><strong>Wie lange:</strong> Buchungsbelege bewahren wir für die
+        gesetzlichen Aufbewahrungsfristen auf — je nach Art des Belegs sechs
+        oder zehn Jahre. Vorher können wir sie nicht löschen.</p>
+
+        <p><strong>Deine Rechte:</strong> Auskunft, Berichtigung, Löschung,
+        Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch.
+        Wende dich dazu an die oben genannte Anschrift. Beschweren kannst du
+        dich beim Thüringer Landesbeauftragten für den Datenschutz und die
+        Informationsfreiheit.</p>
+
+        <p>Ausführlich steht das in der
+        <a href="https://www.sc1911-heiligenstadt.de/datenschutz/" target="_blank" rel="noopener">Datenschutzerklärung
+        des Vereins</a>.</p>
+      </div>
+    </details>
+
     <button class="btn btn-green" id="submitBtn" onclick="submitReceipt()">✅ Beleg einreichen</button>
   </div>
 
