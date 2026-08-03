@@ -6,9 +6,9 @@ im selbst gewählten Speicherort.
 
 ## Live-Version
 
-- [vereinsbudget.html](https://tecko1985.github.io/sc-heiligenstadt-budget/vereinsbudget.html) — Haupt-App für den Kassierer
-- [beleg-eingang.html](https://tecko1985.github.io/sc-heiligenstadt-budget/beleg-eingang.html) — Beleg-Einreichung für Helfer
-- [geschaeftsstelle.html](https://tecko1985.github.io/sc-heiligenstadt-budget/geschaeftsstelle.html) — Beleg-Prüfung für die Geschäftsstelle
+- [vereinsbudget.html](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/vereinsbudget.html) — Haupt-App für den Kassierer
+- [beleg-eingang.html](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/beleg-eingang.html) — Beleg-Einreichung für Helfer
+- [geschaeftsstelle.html](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/geschaeftsstelle.html) — Beleg-Prüfung für die Geschäftsstelle
 
 ## Funktionen
 

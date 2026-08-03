@@ -19,7 +19,7 @@
 // dieselbe workers.dev-Subdomain teilen (sieht aus wie eine potenzielle
 // Endlosschleife, ist aber keine) - Service Bindings umgehen das komplett.
 
-const ALLOWED_ORIGIN = 'https://tecko1985.github.io';
+const ALLOWED_ORIGIN = 'https://sc1911heiligenstadt.github.io';
 const NEXTCLOUD_BASE = 'https://nx88695.your-storageshare.de/public.php/dav/files';
 
 // Missbrauchsschutz: CORS schuetzt nur Browser, nicht den Endpunkt selbst.
