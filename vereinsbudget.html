@@ -474,7 +474,6 @@
   }
   .info-card h2 { font-size: 17px; color: var(--blue); margin-bottom: 10px; }
   .info-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.55; }
-  .version-badge-link { cursor: pointer; }
 
   /* Handy: Formularfelder mindestens 16px — iOS Safari zoomt beim Antippen
      eines kleineren Feldes automatisch hinein und wieder heraus zoomt es nicht. */
@@ -542,7 +541,6 @@
   <div class="header-left">
     <span class="icon">⚽</span>
     <h1 id="clubTitle">Vereinsbudget</h1>
-    <span class="version-badge version-badge-link" id="version-badge-header" role="button" tabindex="0" title="Versionshistorie ansehen">Version 1.0</span>
   </div>
   <a href="https://sc1911heiligenstadt.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
   <div class="header-right">
@@ -2320,13 +2318,6 @@
     document.querySelectorAll('nav button[data-tab]').forEach(b => {
       b.addEventListener('click', () => activateTab(b.dataset.tab));
     });
-    const badge = document.getElementById('version-badge-header');
-    if (badge) {
-      badge.addEventListener('click', () => activateTab('info'));
-      badge.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab('info'); }
-      });
-    }
   }
   // ── Automatisches Backup ─────────────────────────────────────────────────────
   const BACKUP_KEY = 'vereinsbudget_backups';

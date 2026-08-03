@@ -113,8 +113,6 @@
   nav button.active { color: var(--blue); border-bottom-color: var(--blue); }
   .tab-section { display: none; }
   .tab-section.active { display: block; }
-  .version-badge-link { cursor: pointer; }
-  .version-badge-link:hover, .version-badge-link:focus-visible { background: rgba(255,255,255,0.32); }
   .card .version-badge { background: var(--gray); color: var(--blue); }
   .changelog-list { list-style: disc; padding-left: 20px; color: var(--muted); font-size: 0.88rem; line-height: 1.6; margin: 0; }
 
@@ -184,7 +182,6 @@
   <div class="header-left">
     <span class="icon">📋</span>
     <h1>Geschäftsstelle — Beleg-Eingang — 1. SC 1911 Heiligenstadt</h1>
-    <span class="version-badge version-badge-link" id="version-badge-header" role="button" tabindex="0" title="Versionshistorie ansehen">Version 1.0</span>
   </div>
   <a href="https://sc1911heiligenstadt.github.io/ToolsUebersicht/" class="back-to-dashboard">← Zurück zum Dashboard</a>
   <div class="header-right">
@@ -791,11 +788,6 @@
     document.getElementById('changelogList').innerHTML = CHANGELOG.map(c => '<li>' + c + '</li>').join('');
     document.querySelectorAll('nav button[data-tab]').forEach(b => {
       b.addEventListener('click', () => activateTab(b.dataset.tab));
-    });
-    const badge = document.getElementById('version-badge-header');
-    badge.addEventListener('click', () => activateTab('info'));
-    badge.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab('info'); }
     });
   })();
 </script>
