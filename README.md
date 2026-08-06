@@ -1,44 +1,29 @@
-# Vereinsbudget-Tool (v1.0)
+# 💰 Vereinsbudget
 
-Client-seitige, no-login Web-App zur Budgetplanung des 1. SC 1911 Heiligenstadt.
-Läuft komplett im Browser, ohne Server oder Account — Daten bleiben lokal bzw.
-im selbst gewählten Speicherort.
+Saison-Budget des Vereins: Einnahmen und Ausgaben planen, eingereichte Belege prüfen und zuordnen. Drei Seiten für drei Rollen — Helfer reichen ein, die Geschäftsstelle prüft, der Kassierer plant.
 
-## Live-Version
+**➡️ [Vereinsbudget öffnen](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/vereinsbudget.html)**
 
-- [vereinsbudget.html](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/vereinsbudget.html) — Haupt-App für den Kassierer
-- [beleg-eingang.html](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/beleg-eingang.html) — Beleg-Einreichung für Helfer
-- [geschaeftsstelle.html](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/geschaeftsstelle.html) — Beleg-Prüfung für die Geschäftsstelle
+## Seiten
 
-## Funktionen
+| Seite | Wofür |
+|---|---|
+| [Beleg-Eingang](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/beleg-eingang.html) | Mobiles Formular für Helfer zum Einreichen von Belegen. |
+| [Geschäftsstelle](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/geschaeftsstelle.html) | Eingegangene Belege prüfen, korrigieren und als geprüft markieren — ohne Einblick in die Budgetplanung. |
+| [Vereinsbudget](https://sc1911heiligenstadt.github.io/sc-heiligenstadt-budget/vereinsbudget.html) | Budgetübersicht, Einnahmen/Ausgaben und Belegverwaltung für den Kassierer. |
 
-**Haupt-App (`vereinsbudget.html`)**
-- Einnahmen & Ausgaben mit frei anlegbaren und löschbaren Kategorien erfassen
-- Dashboard mit Saldo, Budget-Auslastung und Kreisdiagrammen je Kategorie (Werte & Prozente)
-- Belege (Bilder/PDF) je Eintrag anhängen, ansehen und löschen — wahlweise im Browser-Speicher oder in einem verknüpften Ordner
-- Fester Speicherort für die Datendatei mit automatischem Speichern & Laden (z. B. Hetzner Storage Share)
-- CSV-Export sowie Drucken/PDF inkl. Belegnachweisen als eigene Seiten
-- Nachträgliches Ändern der Kategorie bestehender Einträge
-- Mehrere Saisons verwaltbar (alle Saisons in einer Datendatei), mit Passwortschutz für
-  „Saison leeren" — das Passwort wird serverseitig geprüft, kein Passwort im Quellcode
-- „Erfasst von"-Kennzeichnung pro Eintrag
-- Automatische lokale Backups (letzte 5) sowie optionales Backup in einem verknüpften Ordner
-- Eingehende Helfer-Belege direkt aus dem Eingangs-Ordner einsehen, mit einem Klick als Einnahme/Ausgabe übernehmen oder verwerfen
-- Übersichtliches Einstellungen-Panel für alle Ordner-Verknüpfungen, Exporte und Versionsinfo
-- Feedback und Änderungswünsche laufen zentral über die Tools-Übersicht (Tab „Feedback & Hilfe")
+## Zugang
 
-**Beleg-Einreichung (`beleg-eingang.html`)**
-- Separates, mobil-fähiges Formular für Helfer ohne Budget-Zugriff (z. B. zum Einreichen von Tankrechnungen)
-- Upload per Foto oder PDF, funktioniert auf jedem Gerät/Browser ohne Login
-- Zugriffscode wird serverseitig geprüft (kein Code im Quellcode der Seite)
-- Übermittlung serverseitig über einen Cloudflare-Worker-Proxy (`worker.js`) an einen Nextcloud-Freigabelink
+Jede der drei Seiten ist mit einem eigenen Passwort geschützt, nicht über das Vereinskonto — so sieht die Geschäftsstelle die Belege, ohne Einblick in die Budgetplanung zu bekommen.
 
-**Geschäftsstelle-Prüfung (`geschaeftsstelle.html`)**
-- Eigener Ordner-Zugriff auf denselben Eingangs-Ordner wie `beleg-eingang.html`, ohne Einblick in die Budgetplanung selbst
-- Eingegangene Belege ansehen, als „geprüft" markieren oder die Markierung wieder entfernen
-- Geprüfte Belege als „erledigt" ablegen (verschiebt Beleg + Daten in einen Unterordner „Erledigt", bleibt im Vereinsbudget weiterhin zur Übernahme verfügbar) oder unwiderruflich löschen
+## Lokal starten
 
-## Hinweise
+Über den Eintrag `sc-heiligenstadt-budget` in `E:\.claude\launch.json` — der Server läuft dann auf `http://localhost:8772/`.
 
-Echte Vereinsdaten (Datendatei, Backups, Belege) werden **nicht** ins Repo committet —
-diese liegen ausschließlich in den vom Nutzer verknüpften lokalen/Cloud-Ordnern.
+## Technik
+
+Vanilla JavaScript ohne Build-Schritt — die Dateien werden so ausgeliefert, wie sie im Repo liegen. Veröffentlicht über GitHub Pages. Eigene Cloudflare-Worker in diesem Repo: `worker.js`. Die werden **nicht** über GitHub Pages ausgeliefert, sondern separat bei Cloudflare veröffentlicht.
+
+---
+
+Ein Werkzeug des 1. SC 1911 Heiligenstadt. Alle Werkzeuge auf einen Blick: [Tools-Übersicht](https://sc1911heiligenstadt.github.io/ToolsUebersicht/) · Erklärungen im [Toolbox Wiki](https://sc1911heiligenstadt.github.io/Vereinswiki/).
